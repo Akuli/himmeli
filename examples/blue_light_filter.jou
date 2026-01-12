@@ -207,40 +207,42 @@ def create_gamma_ramp(multiplier: double, ramp_length: int) -> uint16*:
     return ramp
 
 
-def set_gamma_ramps(
+def set_multipliers_for_screen(
     connection: xcb_connection_t*,
     screen: uint32,
-    ramp_length: uint16,
-    red_ramp: uint16*,
-    green_ramp: uint16*,
-    blue_ramp: uint16*,
+    red_multiplier: double,
+    green_multiplier: double,
+    blue_multiplier: double,
 ) -> None:
-    cookie = xcb_randr_set_crtc_gamma_checked(connection, screen, ramp_length, red_ramp, green_ramp, blue_ramp)
+    gamma_ramp_length = get_gamma_ramp_length(connection, screen)
+
+    red_ramp = create_gamma_ramp(1, gamma_ramp_length)
+    green_ramp = create_gamma_ramp(1, gamma_ramp_length)
+    blue_ramp = create_gamma_ramp(0.3, gamma_ramp_length)
+
+    cookie = xcb_randr_set_crtc_gamma_checked(connection, screen, gamma_ramp_length, red_ramp, green_ramp, blue_ramp)
     error = xcb_request_check(connection, cookie)
     assert error == NULL
 
+    free(red_ramp)
+    free(green_ramp)
+    free(blue_ramp)
 
-def main() -> int:
+
+def set_multipliers(red_multiplier: double, green_multiplier: double, blue_multiplier: double) -> None:
     # Connect to X server
     x_screen_index: int
     connection = xcb_connect(NULL, &x_screen_index)
     assert xcb_connection_has_error(connection) == 0
 
     screens = get_randr_screens(connection, x_screen_index)
-    screen = screens.ptr[0]  # TODO
-
-    gamma_ramp_length = get_gamma_ramp_length(connection, screen)
-
-    red_ramp = create_gamma_ramp(1, gamma_ramp_length)
-    green_ramp = create_gamma_ramp(1, gamma_ramp_length)
-    blue_ramp = create_gamma_ramp(0, gamma_ramp_length)
-
-    set_gamma_ramps(connection, screen, gamma_ramp_length, red_ramp, green_ramp, blue_ramp)
-
-    free(red_ramp)
-    free(green_ramp)
-    free(blue_ramp)
+    for screen = screens.ptr; screen < screens.end(); screen++:
+        set_multipliers_for_screen(connection, *screen, red_multiplier, green_multiplier, blue_multiplier)
 
     free(screens.ptr)
     xcb_disconnect(connection)
+
+
+def main() -> int:
+    set_multipliers(1,1,0)
     return 0
