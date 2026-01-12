@@ -334,7 +334,11 @@ def parse_args(argc: int, argv: byte**, r: double*, g: double*, b: double*) -> N
     # Not perfect, but good enough for this.
     # Note that the magic numbers sum to 1 so this is a weighted average.
     brightness = 0.2126*(*r) + 0.7152*(*g) + 0.0722*(*b)
-    if brightness < 0.08 and not force:
+
+    # The threshold value must be less than any coefficient above, so that you
+    # can easily (without -f/--force) figure out what each color by itself
+    # does. For example, threshold 0.08 is too big, because "0 0 1" would fail.
+    if brightness < 0.07 and not force:
         fprintf(get_stderr(), "%s: refusing because screen would become very dark, use --force if that's really what you want\n", program_name)
         exit(1)
 
