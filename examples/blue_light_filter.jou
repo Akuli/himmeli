@@ -1,0 +1,246 @@
+import "stdlib/assert.jou"
+import "stdlib/list.jou"
+import "stdlib/math.jou"
+import "stdlib/mem.jou"
+import "stdlib/limits.jou"
+
+# Needs "sudo apt install libxcb1-dev libxcb-randr0-dev" or similar.
+# These are the same libraries that redshift uses on X11.
+link "-lxcb -lxcb-randr"
+
+
+# The calculate_*_multiplier() functions work with values between 0 and 1. They
+# determine how much light of each color should be filtered.
+#
+# The input x is a visibility value:
+#   0 = user wants black screen
+#   1 = user wants to do nothing
+#
+# The output is a multiplier for colors:
+#   0 = all colors become black
+#   1 = colors do not change
+#
+# So these functions return inputs 0 and 1 unchanged, but the interesting thing
+# is what they do between 0 and 1.
+#
+# These functions were inspired by the hard-coded table in the redshift
+# program, but are not exactly the same.
+#
+# You can use https://akuli.github.io/grapher/ to visualize these functions.
+# The visibility value is named "x" so that you can copy/paste there easily.
+def calculate_red_multiplier(x: double) -> double:
+    # Linearly slide from 0 to 1 on [0, 0.15], then stay at 1
+    return fmin(x / 0.15, 1)
+
+def calculate_green_multiplier(x: double) -> double:
+    # redshift's curve is close to a sideways parabola with peak at (0.15,0.15)
+    # and passing through point (1,1). This is basically y=x with some extra
+    # curviness to somewhat follow the parabola.
+    return x + x*pow(1-x, 1.3)
+
+def calculate_blue_multiplier(x: double) -> double:
+    # redshift's curve is again close to a sideways parabola through (1,1), but
+    # now peak is at about (0.3, 0).
+    #
+    # This function is a linear slide from 0 to 1 on [0.3, 1], and before 0.3
+    # this is zero. This produces less blue light than redshift, which doesn't
+    # sound like a bad thing to me.
+    return fmax((x - 0.3) / (1 - 0.3), 0)
+
+    # Other things I came up with:
+    #return x - (sin(4*x) / 4)*(1 - x*x)
+    #return 10*pow(x,4) / (9*pow(x,4) + 1)
+
+
+# These are based on /usr/include/xcb/*.h files on my system.
+# Documentation: https://xcb.freedesktop.org/manual/files.html
+#
+# I use a simple uint32 instead of the following C types:
+#
+#   xcb_randr_get_screen_resources_current_cookie_t
+#   xcb_randr_get_crtc_gamma_size_cookie_t
+#   xcb_window_t
+#   xcb_randr_crtc_t
+#   xcb_void_cookie_t
+
+# ~~~~~~~~~~~~~
+# ~~~ xcb.h ~~~
+# ~~~~~~~~~~~~~
+
+# Members of these classes are not relevant here because we only pass around
+# pointers to instances. So we can use empty classes.
+class xcb_connection_t:
+    pass
+class xcb_setup_t:
+    pass
+class xcb_generic_error_t:
+    pass
+
+declare xcb_connect(displayname: byte*, screenp: int*) -> xcb_connection_t*
+declare xcb_disconnect(c: xcb_connection_t*) -> None
+declare xcb_connection_has_error(c: xcb_connection_t*) -> int
+declare xcb_get_setup(c: xcb_connection_t*) -> xcb_setup_t*
+declare xcb_request_check(c: xcb_connection_t*, cookie: uint32) -> xcb_generic_error_t*
+
+# ~~~~~~~~~~~~~~~~
+# ~~~ xproto.h ~~~
+# ~~~~~~~~~~~~~~~~
+
+class xcb_screen_t:
+    root: uint32  # actually xcb_window_t, but that struct contains just this
+    # There are other fields that can be filled in later if needed.
+
+class xcb_screen_iterator_t:
+    # This is not just passed around as pointer, we actually need all fields
+    # need to be present. (Or at least "data" and something to make this big
+    # enough to avoid overwriting other stuff on stack.)
+    data: xcb_screen_t*
+    rem: int
+    index: int
+
+declare xcb_setup_roots_iterator(r: xcb_setup_t*) -> xcb_screen_iterator_t
+declare xcb_screen_next(i: xcb_screen_iterator_t*) -> None
+
+# ~~~~~~~~~~~~~~~
+# ~~~ randr.h ~~~
+# ~~~~~~~~~~~~~~~
+
+class xcb_randr_get_screen_resources_current_reply_t:
+    pass
+class xcb_randr_get_crtc_gamma_size_reply_t:
+    response_type: uint8
+    pad0: uint8
+    sequence: uint16
+    length: uint32
+    size: uint16  # We use only this, but the stuff before defines the offset of this field.
+    # There are other fields that can be filled in later if needed.
+
+declare xcb_randr_get_screen_resources_current(c: xcb_connection_t*, window: uint32) -> uint32
+declare xcb_randr_get_screen_resources_current_reply(
+    c: xcb_connection_t*,
+    cookie: uint32,
+    e: xcb_generic_error_t**,
+) -> xcb_randr_get_screen_resources_current_reply_t*
+declare xcb_randr_get_screen_resources_current_crtcs_length(R: xcb_randr_get_screen_resources_current_reply_t*) -> int
+declare xcb_randr_get_screen_resources_current_crtcs(R: xcb_randr_get_screen_resources_current_reply_t*) -> uint32*
+declare xcb_randr_get_crtc_gamma_size(c: xcb_connection_t*, crtc: uint32) -> uint32
+declare xcb_randr_get_crtc_gamma_size_reply(
+    c: xcb_connection_t*,
+    cookie: uint32,
+    e: xcb_generic_error_t**,
+) -> xcb_randr_get_crtc_gamma_size_reply_t*
+declare xcb_randr_set_crtc_gamma_checked(c: xcb_connection_t*, crtc: uint32, size: uint16, red: uint16*, green: uint16*, blue: uint16*) -> uint32
+
+
+# In randr, a CRTC is basically a screen. This function gets an array of all CRTCs.
+# I have no idea why this has to be so complicated...
+def get_randr_screens(connection: xcb_connection_t*, x_screen_index: int) -> List[uint32]:
+    setup = xcb_get_setup(connection)
+
+    # Get the X screen that xcb_connect() told us to use. There is almost
+    # always just one X "screen", even if multiple screens are connected to the
+    # computer. There may be multiple CRTCs.
+    iter = xcb_setup_roots_iterator(setup)
+    while x_screen_index --> 0:
+        xcb_screen_next(&iter)
+    x_screen = iter.data
+    assert x_screen != NULL
+
+    # If I understand correctly, a cookie is basically an ID number for a
+    # request to the X server. I don't know why making a request and getting
+    # its response can't be in the same function.
+    cookie = xcb_randr_get_screen_resources_current(connection, x_screen.root)
+    error: xcb_generic_error_t* = NULL
+    resources_reply = xcb_randr_get_screen_resources_current_reply(connection, cookie, &error)
+    assert error == NULL
+    assert resources_reply != NULL
+
+    result = List[uint32]{}
+    result.extend_from_ptr(
+        xcb_randr_get_screen_resources_current_crtcs(resources_reply),
+        xcb_randr_get_screen_resources_current_crtcs_length(resources_reply),
+    )
+
+    free(resources_reply)
+    return result
+
+
+# To set multipliers for R, G and B channels, we pass arrays of gamma values to
+# each screen. This function returns the length of those arrays. On my system
+# it is 1024, but I'm not sure if that can vary.
+def get_gamma_ramp_length(connection: xcb_connection_t*, screen: uint32) -> uint16:
+    cookie = xcb_randr_get_crtc_gamma_size(connection, screen)
+    error: xcb_generic_error_t* = NULL
+    gamma_size_reply = xcb_randr_get_crtc_gamma_size_reply(connection, cookie, &error)
+    assert error == NULL
+    assert gamma_size_reply != NULL
+    assert gamma_size_reply.size > 0
+
+    result = gamma_size_reply.size
+    free(gamma_size_reply)
+    return result
+
+
+# A gamma ramp is an array whose index is basically an R, G or B value from
+# some GUI program, and the value in the gamma ramp specifies how it's shown on
+# screen.
+#
+# For example, if the red gamma ramp contains only zeroes, then red is never
+# shown. Or if the red gamma ramp is full of UINT16_MAX (0xffff), then all
+# pixels of the screen show as much as red as they can.
+#
+# Examples:
+#    create_gamma_ramp(1, 6)        --> [0, 0x3333, 0x6666, 0x9999, 0xcccc, 0xffff]
+#    create_gamma_ramp(1.0/3.0, 6)  --> [0, 0x1111, 0x2222, 0x3333, 0x4444, 0x5555]
+#
+def create_gamma_ramp(multiplier: double, ramp_length: int) -> uint16*:
+    assert 0 <= multiplier and multiplier <= 1
+    assert ramp_length >= 2
+
+    biggest_value: double = multiplier * UINT16_MAX
+    step: double = biggest_value / (ramp_length - 1)
+
+    ramp: uint16* = malloc(sizeof(ramp[0]) * ramp_length)
+    assert ramp != NULL
+    for i = 0; i < ramp_length; i++:
+        ramp[i] = (i*step) as uint16
+    return ramp
+
+
+def set_gamma_ramps(
+    connection: xcb_connection_t*,
+    screen: uint32,
+    ramp_length: uint16,
+    red_ramp: uint16*,
+    green_ramp: uint16*,
+    blue_ramp: uint16*,
+) -> None:
+    cookie = xcb_randr_set_crtc_gamma_checked(connection, screen, ramp_length, red_ramp, green_ramp, blue_ramp)
+    error = xcb_request_check(connection, cookie)
+    assert error == NULL
+
+
+def main() -> int:
+    # Connect to X server
+    x_screen_index: int
+    connection = xcb_connect(NULL, &x_screen_index)
+    assert xcb_connection_has_error(connection) == 0
+
+    screens = get_randr_screens(connection, x_screen_index)
+    screen = screens.ptr[0]  # TODO
+
+    gamma_ramp_length = get_gamma_ramp_length(connection, screen)
+
+    red_ramp = create_gamma_ramp(1, gamma_ramp_length)
+    green_ramp = create_gamma_ramp(1, gamma_ramp_length)
+    blue_ramp = create_gamma_ramp(0, gamma_ramp_length)
+
+    set_gamma_ramps(connection, screen, gamma_ramp_length, red_ramp, green_ramp, blue_ramp)
+
+    free(red_ramp)
+    free(green_ramp)
+    free(blue_ramp)
+
+    free(screens.ptr)
+    xcb_disconnect(connection)
+    return 0
