@@ -1,8 +1,11 @@
 import "stdlib/assert.jou"
+import "stdlib/io.jou"
 import "stdlib/list.jou"
 import "stdlib/math.jou"
 import "stdlib/mem.jou"
 import "stdlib/limits.jou"
+import "stdlib/str.jou"
+import "stdlib/process.jou"
 
 # Needs "sudo apt install libxcb1-dev libxcb-randr0-dev" or similar.
 # These are the same libraries that redshift uses on X11.
@@ -40,16 +43,12 @@ def calculate_green_multiplier(x: double) -> double:
 
 def calculate_blue_multiplier(x: double) -> double:
     # redshift's curve is again close to a sideways parabola through (1,1), but
-    # now peak is at about (0.3, 0).
-    #
-    # This function is a linear slide from 0 to 1 on [0.3, 1], and before 0.3
-    # this is zero. This produces less blue light than redshift, which doesn't
-    # sound like a bad thing to me.
-    return fmax((x - 0.3) / (1 - 0.3), 0)
+    # now peak is at about (0.3, 0). I spent way too much time trying to come
+    # up with curves to somewhat follow that parabola...
 
-    # Other things I came up with:
     #return x - (sin(4*x) / 4)*(1 - x*x)
-    #return 10*pow(x,4) / (9*pow(x,4) + 1)
+    return 10*pow(x,4) / (9*pow(x,4) + 1)
+    #return fmax((x - 0.3) / (1 - 0.3), 0)  # linear slide from 0 to 1 on [0.3, 1]
 
 
 # These are based on /usr/include/xcb/*.h files on my system.
@@ -216,9 +215,9 @@ def set_multipliers_for_screen(
 ) -> None:
     gamma_ramp_length = get_gamma_ramp_length(connection, screen)
 
-    red_ramp = create_gamma_ramp(1, gamma_ramp_length)
-    green_ramp = create_gamma_ramp(1, gamma_ramp_length)
-    blue_ramp = create_gamma_ramp(0.3, gamma_ramp_length)
+    red_ramp = create_gamma_ramp(red_multiplier, gamma_ramp_length)
+    green_ramp = create_gamma_ramp(green_multiplier, gamma_ramp_length)
+    blue_ramp = create_gamma_ramp(blue_multiplier, gamma_ramp_length)
 
     cookie = xcb_randr_set_crtc_gamma_checked(connection, screen, gamma_ramp_length, red_ramp, green_ramp, blue_ramp)
     error = xcb_request_check(connection, cookie)
@@ -229,8 +228,7 @@ def set_multipliers_for_screen(
     free(blue_ramp)
 
 
-def set_multipliers(red_multiplier: double, green_multiplier: double, blue_multiplier: double) -> None:
-    # Connect to X server
+def set_multipliers_for_all_screens(red_multiplier: double, green_multiplier: double, blue_multiplier: double) -> None:
     x_screen_index: int
     connection = xcb_connect(NULL, &x_screen_index)
     assert xcb_connection_has_error(connection) == 0
@@ -243,6 +241,102 @@ def set_multipliers(red_multiplier: double, green_multiplier: double, blue_multi
     xcb_disconnect(connection)
 
 
-def main() -> int:
-    set_multipliers(1,1,0)
+def print_help(program_name: byte*) -> None:
+    printf("Usage:\n")
+    printf("  %s [-f/--force] R G B    Set multipliers for red, green and blue\n", program_name)
+    printf("  %s [-f/--force] VALUE    Set visibility value (see below)\n", program_name)
+    printf("\n")
+    printf("Options:\n")
+    printf("  -f, --force       Allow making the screen very dark\n")
+    printf("\n")
+    printf("Try these to get started:\n")
+    printf("  %s 0.5\n", program_name)
+    printf("  %s 1\n", program_name)
+    printf("\n")
+    printf("All values are given in the range 0 to 1.\n")
+    printf("\n")
+    printf("If you specify Red, Green and Blue multipliers (numbers between 0 and 1), each\n")
+    printf("color will be multiplied by them before it's shown on screen. For example:\n")
+    printf("\n")
+    printf("    1 1 1           colors will be shown as is, nothing is done to them\n")
+    printf("    0.5 0.5 0.5     decrease screen brightness\n")
+    printf("    0 0 0           completely black screen! (needs -f if you really want this)\n")
+    printf("    1 1 0           remove all blue light\n")
+    printf("\n")
+    printf("You can also specify just one number (between 0 and 1). I like to call it a\n")
+    printf("\"visibility value\". This is NOT same as specifying the same value three times.\n")
+    printf("Instead, the R, G and B multipliers are derived so that as you decrease the\n")
+    printf("visibility value, blue light is removed first, making the screen less straining\n")
+    printf("to look at. For example:\n")
+    printf("\n")
+    printf("    0       completely black screen! (needs -f if you really want this)\n")
+    printf("    0.5     makes the screen look comfy, removes a lot of blue and some green\n")
+    printf("    1       colors will be shown as is, nothing is done to them\n")
+    printf("\n")
+
+
+# TODO: belongs to Jou stdlib!
+declare strtod(nptr: byte*, endptr: byte**) -> double
+
+
+# TODO: belongs to Jou stdlib??
+def parse_double(s: byte*, result: double*) -> bool:
+    if s[0] == '\0':
+        return False
+
+    endptr: byte*
+    *result = strtod(s, &endptr)
+    return endptr == &s[strlen(s)]
+
+
+def parse_args(argc: int, argv: byte**, r: double*, g: double*, b: double*) -> None:
+    program_name = argv[0]
+
+    values: double[3]
+    nvalues = 0
+    force = False
+
+    for i = 1; i < argc; i++:
+        match argv[i] with strcmp:
+            case "-f" | "--force":
+                force = True
+            case "--help":
+                print_help(program_name)
+                exit(0)
+            case _:
+                if nvalues == array_count(values):
+                    fprintf(get_stderr(), "%s: too many numbers given (try \"%s --help\")\n", program_name, program_name)
+                    exit(2)
+                value: double
+                if not parse_double(argv[i], &value):
+                    fprintf(get_stderr(), "%s: unknown argument \"%s\" (try \"%s --help\")\n", program_name, argv[i], program_name)
+                    exit(2)
+                # TODO: check for +infinity, -infinity and NaN
+                if value < 0 or value > 1:
+                    fprintf(get_stderr(), "%s: value must be between 0 and 1, not %f (try \"%s --help\")\n", program_name, value, program_name)
+                    exit(2)
+                values[nvalues++] = value
+
+    match nvalues:
+        case 1:
+            visibility = values[0]
+            *r = calculate_red_multiplier(visibility)
+            *g = calculate_green_multiplier(visibility)
+            *b = calculate_blue_multiplier(visibility)
+        case 3:
+            *r = values[0]
+            *g = values[1]
+            *b = values[2]
+        case _:
+            fprintf(get_stderr(), "%s: expected 1 or 3 numbers, got %d (try \"%s --help\")\n", program_name, nvalues, program_name)
+            exit(2)
+
+    if *r < 0.1 and *g < 0.1 and *b < 0.1 and not force:
+        fprintf(get_stderr(), "%s: refusing because screen would become very dark, use --force if that's really what you want\n", program_name)
+
+
+def main(argc: int, argv: byte**) -> int:
+    r, g, b: double
+    parse_args(argc, argv, &r, &g, &b)
+    set_multipliers_for_all_screens(r, g, b)
     return 0
