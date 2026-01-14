@@ -1,5 +1,6 @@
 import "stdlib/ascii.jou"
 import "stdlib/io.jou"
+import "stdlib/list.jou"
 import "stdlib/math.jou"
 import "stdlib/mem.jou"
 import "stdlib/str.jou"
@@ -71,54 +72,57 @@ def calculate_blue_multiplier(x: double) -> double:
 
 
 def print_help(program_name: byte*) -> None:
-    printf("Usage: %s [--allow-dark] [--smoothstep] \"SPEC\" [\"SPEC\" ...]\n", program_name)
+    printf("Usage: %s [--allow-dark] [--smoothstep] \"SETTING\" [\"SETTING\" ...]\n", program_name)
     printf("\n")
     printf("Options:\n")
     printf("  --help          this message\n")
     printf("  --allow-dark    allow making the screen very dark\n")
     printf("  --smoothstep    use the smoothstep function instead of linear interpolation\n")
     printf("\n")
-    printf("The simplest possible SPEC is a number between 0 (black screen) and 1 (reset).\n")
-    printf("Values between 0 and 1 filter out mostly blue right. For example, I use 0.6\n")
-    printf("during the day to make the screen look comfy and easier on the eyes.\n")
+    printf("The simplest possible setting is a number between 0 and 1, where 0 means black\n")
+    printf("screen, 1 means reset, and values between 0 and 1 filter out mostly blue right.\n")
+    printf("For example, I use 0.6 during the day to make the screen look comfy and easy on\n")
+    printf("my eyes.\n")
     printf("\n")
-    printf("The SPEC can also be R, G and B values between 0 and 1 separated by spaces. For\n")
-    printf("example, \"0.5 0.5 0.5\" basically decreases brightness.\n")
+    printf("The SETTING can also be R, G and B numbers between 0 and 1 separated by spaces.\n")
+    printf("For example, \"0.5 0.5 0.5\" basically decreases brightness, and \"1 1 0\" filters\n")
+    printf("out all blue light (probably not what you want).\n")
     printf("\n")
-    printf("If you specify multiple SPECs, each SPEC must have \"@ hh:mm\" (hour and minute)\n")
-    printf("or \"@ hh\" (hour) at the end to specify when the spec should apply: \"0.6 @ 22\"\n")
+    printf("If you specify multiple settings, they must have \"@ hh:mm\" (hour and minute) or\n")
+    printf("\"@ hh\" (hour) at the end to specify when the setting should apply: \"0.6 @ 22\"\n")
     printf("means that value 0.6 will be used if you run the command at 22:00 (10PM). The\n")
     printf("values are interpolated at other times (linearly by default).\n")
 
 
-class Spec:
+class Setting:
     r_multiplier: double
     g_multiplier: double
     b_multiplier: double
+    original_color_string: byte[100]
+
     hour: int
     minute: int
 
 
 class CommandLineArgs:
     program_name: byte*
-    specs: Spec[100]
-    nspecs: int
+    settings: List[Setting]
     allow_dark: bool
     smoothstep: bool
 
     def print(self: CommandLineArgs*) -> None:
         printf("program_name = %s\n", self.program_name)
-        printf("allow_dark   = %d\n", self.allow_dark)
-        printf("smoothstep   = %d\n", self.smoothstep)
-        printf("specs (%d):\n", self.nspecs)
+        printf("allow_dark = %d\n", self.allow_dark)
+        printf("smoothstep = %d\n", self.smoothstep)
+        printf("settings (%zd):\n", self.settings.len)
 
-        for i = 0; i < self.nspecs; i++:
-            s = &self.specs[i]
+        for i = 0; i < self.settings.len; i++:
+            s = &self.settings.ptr[i]
             printf(
                 "  [%d] R=%.3f  G=%.3f  B=%.3f",
                 i, s.r_multiplier, s.g_multiplier, s.b_multiplier,
             )
-            if s.hour >= 0:
+            if s.hour >= 0 and s.minute >= 0:
                 printf("  @ %02d:%02d\n", s.hour, s.minute)
             else:
                 printf("  (no time)\n")
@@ -150,11 +154,8 @@ def parse_time(args: CommandLineArgs*, s: byte*) -> int[2]:
 
 
 def parse_spec(args: CommandLineArgs*, s: byte*) -> None:
-    if args.nspecs == array_count(args.specs):
-        fail(args, "too many arguments")
-
     s = strdup(s)
-    spec = &args.specs[args.nspecs++]
+    spec = Setting{}
 
     at = strstr(s, "@")
     if at != NULL:
@@ -165,6 +166,9 @@ def parse_spec(args: CommandLineArgs*, s: byte*) -> None:
     else:
         spec.hour = -1
         spec.minute = -1
+
+    trim_ascii_whitespace(s)
+    snprintf(spec.original_color_string, sizeof(spec.original_color_string), "%s", s)
 
     parts = split_by_ascii_whitespace(s)
     match parts.len:
@@ -184,10 +188,12 @@ def parse_spec(args: CommandLineArgs*, s: byte*) -> None:
 
     free(parts.ptr)
     free(s)
+    args.settings.append(spec)
 
 
 def main(argc: int, argv: byte**) -> int:
     args = CommandLineArgs{program_name = argv[0]}
+    msg: byte[300]
 
     for i = 1; i < argc; i++:
         match argv[i] with strcmp:
@@ -200,22 +206,34 @@ def main(argc: int, argv: byte**) -> int:
                 args.smoothstep = True
             case _:
                 if argv[i][0] == '-':
-                    msg: byte[300]
                     snprintf(msg, sizeof(msg), "unknown option \"%s\" (try --help)", argv[i])
                     fail(&args, msg)
                 parse_spec(&args, argv[i])
 
+    if args.settings.len == 0:
+        fail(&args, "please specify how to color the screen (try --help)")
+
+    if args.settings.len == 1 and args.settings.ptr[0].hour >= 0:
+        fail(&args, "a time cannot be specified if you give just one state (try --help)")
+
+    if not args.allow_dark:
+        for s = &args.settings.ptr[0]; s < args.settings.end(); s++:
+            # Not perfect, but good enough for this.
+            # Note that the magic numbers sum to 1 so this is a weighted average.
+            brightness = 0.2126*s.r_multiplier + 0.7152*s.g_multiplier + 0.0722*s.b_multiplier
+
+            # The threshold value must be less than any coefficient above, so that you
+            # can easily (without --allow-dark) figure out what each color by itself
+            # does. For example, threshold 0.08 is too big, because "0 0 1" would fail.
+            if brightness < 0.07:
+                snprintf(
+                    msg, sizeof(msg),
+                    "refusing because \"%s\" would make the screen very dark, use --allow-dark if that's really what you want",
+                    s.original_color_string,
+                )
+                fail(&args, msg)
+
     args.print()
 
-#    # Not perfect, but good enough for this.
-#    # Note that the magic numbers sum to 1 so this is a weighted average.
-#    brightness = 0.2126*(*r) + 0.7152*(*g) + 0.0722*(*b)
-#
-#    # The threshold value must be less than any coefficient above, so that you
-#    # can easily (without --allow-dark) figure out what each color by itself
-#    # does. For example, threshold 0.08 is too big, because "0 0 1" would fail.
-#    if brightness < 0.07 and not force:
-#        fprintf(get_stderr(), "%s: refusing because screen would become very dark, use --force if that's really what you want\n", program_name)
-#        exit(1)
-
+    free(args.settings.ptr)
     return 0
