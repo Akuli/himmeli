@@ -17,7 +17,7 @@ black screen, 1 means reset, and values between 0 and 1 filter out mostly blue
 light. For example, I use 0.6 during the day to make the screen look comfy and
 easy on my eyes.
 
-The SETTING can also be R, G and B numbers between 0 and 1 separated by spaces.
+The state can also be R, G and B numbers between 0 and 1 separated by spaces.
 For example, "0.5 0.5 0.5" basically decreases brightness, and "1 1 0" filters
 out all blue light (probably not what you want).
 
