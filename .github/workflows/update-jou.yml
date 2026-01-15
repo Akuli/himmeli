@@ -8,7 +8,7 @@ on:
 
 jobs:
   update-jou:
-    if: github.repository == 'Akuli/curses-klondike'  # Do not run on forks
+    if: github.repository == 'Akuli/curses-himmeli'  # Do not run on forks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
