@@ -79,7 +79,6 @@ def print_help(program_name: byte*) -> None:
     printf("Options:\n")
     printf("  --help          this message\n")
     printf("  --allow-dark    allow making the screen very dark\n")
-    printf("  --smoothstep    use the smoothstep function instead of linear interpolation\n")
     printf("\n")
     printf("The simplest way to specify a state is a number between 0 and 1. Here 0 means\n")
     printf("black screen, 1 means reset, and values between 0 and 1 filter out mostly blue\n")
@@ -110,13 +109,11 @@ class CommandLineArgs:
     program_name: byte*
     states: List[State]
     allow_dark: bool
-    smoothstep: bool
 
     @public
     def print(self) -> None:
         printf("program_name = %s\n", self.program_name)
         printf("allow_dark = %s\n", "True" if self.allow_dark else "False")
-        printf("smoothstep = %s\n", "True" if self.smoothstep else "False")
         printf("states (%zd):\n", self.states.len)
 
         for i = 0; i < self.states.len; i++:
@@ -210,8 +207,6 @@ def parse_command_line_args(argc: int, argv: byte**) -> CommandLineArgs:
                 exit(0)
             case "--allow-dark":
                 args.allow_dark = True
-            case "--smoothstep":
-                args.smoothstep = True
             case _:
                 if argv[i][0] == '-':
                     snprintf(msg, sizeof(msg), "unknown option \"%s\" (try --help)", argv[i])
@@ -224,8 +219,6 @@ def parse_command_line_args(argc: int, argv: byte**) -> CommandLineArgs:
         case 1:
             if args.states.ptr[0].hour >= 0 and args.states.ptr[0].minute >= 0:
                 fail(&args, "a time cannot be specified if you give just one state (try --help)")
-            if args.smoothstep:
-                fail(&args, "--smoothstep can be used only if you specify multiple states (try --help)")
         case _:
             for s = args.states.ptr; s < args.states.end(); s++:
                 if s.hour < 0 or s.minute < 0:
@@ -294,8 +287,6 @@ def interpolate_states(args: CommandLineArgs*) -> double[3]:
 
     # Compute interpolation factor t, so that t=0 means prev and t=1 means next
     t = (prev_diff as double) / (prev_diff + next_diff)
-    if args.smoothstep:
-        t = t * t * (3 - 2*t)
 
     return [
         lerp(prev.r_multiplier, next.r_multiplier, t),

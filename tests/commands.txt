@@ -11,7 +11,6 @@ Usage:
 Options:
   --help          this message
   --allow-dark    allow making the screen very dark
-  --smoothstep    use the smoothstep function instead of linear interpolation
 
 The simplest way to specify a state is a number between 0 and 1. Here 0 means
 black screen, 1 means reset, and values between 0 and 1 filter out mostly blue
@@ -79,7 +78,6 @@ $ ./himmeli_dry_run "1 @ 12:34" "0.5 @ 12:34:56"
 $ ./himmeli_dry_run "  1 1 1@12:34 " ".6@23:45"
 program_name = ./himmeli_dry_run
 allow_dark = False
-smoothstep = False
 states (2):
   [0] R=1.000  G=1.000  B=1.000  @ 12:34
   [1] R=1.000  G=0.764  B=0.598  @ 23:45
@@ -88,7 +86,6 @@ states (2):
 $ ./himmeli_dry_run "0.5 @ 09:01 " "1 @ 9:2"
 program_name = ./himmeli_dry_run
 allow_dark = False
-smoothstep = False
 states (2):
   [0] R=1.000  G=0.686  B=0.400  @ 09:01
   [1] R=1.000  G=1.000  B=1.000  @ 09:02
@@ -99,14 +96,12 @@ $ ./himmeli_dry_run --asdf
 $ ./himmeli_dry_run 1
 program_name = ./himmeli_dry_run
 allow_dark = False
-smoothstep = False
 states (1):
   [0] R=1.000  G=1.000  B=1.000  (no time)
 
 $ ./himmeli_dry_run 0.6
 program_name = ./himmeli_dry_run
 allow_dark = False
-smoothstep = False
 states (1):
   [0] R=1.000  G=0.764  B=0.598  (no time)
 
@@ -116,7 +111,6 @@ $ ./himmeli_dry_run 0.01
 $ ./himmeli_dry_run --allow-dark 0.01
 program_name = ./himmeli_dry_run
 allow_dark = True
-smoothstep = False
 states (1):
   [0] R=0.067  G=0.002  B=0.000  (no time)
 
@@ -128,7 +122,6 @@ $ ./himmeli_dry_run "1 @ 12:34" "0.01 @ 23:45"
 $ ./himmeli_dry_run "1 @ 12:34" "0.01 @ 23:45" --allow-dark
 program_name = ./himmeli_dry_run
 allow_dark = True
-smoothstep = False
 states (2):
   [0] R=1.000  G=1.000  B=1.000  @ 12:34
   [1] R=0.067  G=0.002  B=0.000  @ 23:45
@@ -137,29 +130,15 @@ states (2):
 $ ./himmeli_dry_run "1 0 0"
 program_name = ./himmeli_dry_run
 allow_dark = False
-smoothstep = False
 states (1):
   [0] R=1.000  G=0.000  B=0.000  (no time)
 $ ./himmeli_dry_run "0 1 0"
 program_name = ./himmeli_dry_run
 allow_dark = False
-smoothstep = False
 states (1):
   [0] R=0.000  G=1.000  B=0.000  (no time)
 $ ./himmeli_dry_run "0 0 1"
 program_name = ./himmeli_dry_run
 allow_dark = False
-smoothstep = False
 states (1):
   [0] R=0.000  G=0.000  B=1.000  (no time)
-
-# Test smoothstep
-$ ./himmeli_dry_run --smoothstep "1"
-./himmeli_dry_run: --smoothstep can be used only if you specify multiple states (try --help)
-$ ./himmeli_dry_run --smoothstep "1 @ 12:34" "0.5 @ 23:45"
-program_name = ./himmeli_dry_run
-allow_dark = False
-smoothstep = True
-states (2):
-  [0] R=1.000  G=1.000  B=1.000  @ 12:34
-  [1] R=1.000  G=0.686  B=0.400  @ 23:45
