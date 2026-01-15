@@ -1,0 +1,92 @@
+import "stdlib/ascii.jou"
+import "stdlib/assert.jou"
+import "stdlib/io.jou"
+import "stdlib/process.jou"
+import "stdlib/str.jou"
+
+
+declare chdir(path: byte*) -> int
+
+
+def begin_command(command: byte*, lineno: int, newline_counter: int*) -> None:
+    printf("Running command (file commands.txt, line %d): %s\n", lineno, command)
+
+    actual_command: byte[1024]
+    snprintf(actual_command, sizeof(actual_command), "%s > actual.txt 2>&1", command)
+    system(actual_command)
+
+    # Clear expected output file
+    f = fopen("expected.txt", "w")
+    assert f != NULL
+    fclose(f)
+
+    *newline_counter = 0
+
+
+def add_expected_output_during_command(output: byte*, newline_counter: int*) -> None:
+    if strcmp(output, "\n") == 0:
+        # Do not write newline right away, so we ignore extra newlines at the end.
+        # That makes the file with commands outputs much more readable.
+        ++*newline_counter
+        return
+
+    f = fopen("expected.txt", "a")
+    assert f != NULL
+
+    while *newline_counter > 0:
+        fputc('\n', f)
+        --*newline_counter
+
+    fputs(output, f)
+    fclose(f)
+
+
+def end_command(fail_counter: int*) -> None:
+    if system("diff -u --color expected.txt actual.txt") != 0:
+        ++*fail_counter
+    system("rm expected.txt actual.txt")
+
+
+def main() -> int:
+    chdir("tests")
+
+    # Compile himmeli_dry_run program
+    assert system("jou -o himmeli_dry_run himmeli_dry_run.jou") == 0
+
+    commands_txt = fopen("commands.txt", "r")
+    assert commands_txt != NULL
+
+    line: byte[1024]
+    first = True
+    newline_counter = 0
+    fail_counter = 0
+    lineno = 0
+
+    while fgets(line, sizeof(line), commands_txt) != NULL:
+        lineno++
+        if starts_with(line, "#"):
+            continue
+
+        if starts_with(line, "$ "):
+            if not first:
+                end_command(&fail_counter)
+            first = False
+            command = &line[2]
+            trim_ascii_whitespace(command)
+            begin_command(command, lineno, &newline_counter)
+        else:
+            add_expected_output_during_command(line, &newline_counter)
+
+    end_command(&fail_counter)
+    fclose(commands_txt)
+
+    if fail_counter > 0:
+        if WINDOWS:
+            printf("\n%d failed\n", fail_counter)
+        else:
+            # Print with red color
+            printf("\n\x1b[31m%d failed\x1b[0m\n", fail_counter)
+        return 1
+    else:
+        printf("\nok\n")
+        return 0

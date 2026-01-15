@@ -15,20 +15,16 @@ def fail(args: CommandLineArgs*, msg: byte*) -> noreturn:
 # TODO(Jou): belongs to stdlib
 declare strtod(nptr: byte*, endptr: byte**) -> double
 
-def string_to_double_between_0_and_1(args: CommandLineArgs*, s: byte*) -> double:
+def parse_double_between_0_and_1(s: byte*, result: double*) -> bool:
     end: byte*
-    value = strtod(s, &end)
-    msg: byte[200]
-
-    if end == s or *end != '\0':
-        snprintf(msg, sizeof(msg), "invalid number \"%s\" (try --help)", s)
-        fail(args, msg)
-
-    if value < 0 or value > 1:
-        snprintf(msg, sizeof(msg), "value \"%s\" must be between 0 and 1", s)
-        fail(args, msg)
-
-    return value
+    *result = strtod(s, &end)
+    return (
+        end > s  # not empty string
+        and *end == '\0'  # no junk after the number
+        and *result >= 0
+        and *result <= 1
+        and *result == *result  # not NaN
+    )
 
 
 # The calculate_*_multiplier() functions work with values between 0 and 1. They
@@ -72,29 +68,31 @@ def calculate_blue_multiplier(x: double) -> double:
 
 
 def print_help(program_name: byte*) -> None:
-    printf("Usage: %s [--allow-dark] [--smoothstep] \"SETTING\" [\"SETTING\" ...]\n", program_name)
+    printf("Usage:\n")
+    printf("  %s [options] \"STATE\"\n", program_name)
+    printf("  %s [options] \"STATE1 @ hh:mm\" \"STATE2 @ hh:mm\" ...\n", program_name)
     printf("\n")
     printf("Options:\n")
     printf("  --help          this message\n")
     printf("  --allow-dark    allow making the screen very dark\n")
     printf("  --smoothstep    use the smoothstep function instead of linear interpolation\n")
     printf("\n")
-    printf("The simplest possible setting is a number between 0 and 1, where 0 means black\n")
-    printf("screen, 1 means reset, and values between 0 and 1 filter out mostly blue right.\n")
-    printf("For example, I use 0.6 during the day to make the screen look comfy and easy on\n")
-    printf("my eyes.\n")
+    printf("The simplest way to specify a state is a number between 0 and 1. Here 0 means\n")
+    printf("black screen, 1 means reset, and values between 0 and 1 filter out mostly blue\n")
+    printf("light. For example, I use 0.6 during the day to make the screen look comfy and\n")
+    printf("easy on my eyes.\n")
     printf("\n")
     printf("The SETTING can also be R, G and B numbers between 0 and 1 separated by spaces.\n")
     printf("For example, \"0.5 0.5 0.5\" basically decreases brightness, and \"1 1 0\" filters\n")
     printf("out all blue light (probably not what you want).\n")
     printf("\n")
-    printf("If you specify multiple settings, they must have \"@ hh:mm\" (hour and minute) or\n")
-    printf("\"@ hh\" (hour) at the end to specify when the setting should apply: \"0.6 @ 22\"\n")
+    printf("If you specify multiple states, they must have \"@ hh:mm\" (hour and minute) or\n")
+    printf("\"@ hh\" (hour) at the end to specify when the state should apply: \"0.6 @ 22\"\n")
     printf("means that value 0.6 will be used if you run the command at 22:00 (10PM). The\n")
     printf("values are interpolated at other times (linearly by default).\n")
 
 
-class Setting:
+class State:
     r_multiplier: double
     g_multiplier: double
     b_multiplier: double
@@ -106,18 +104,19 @@ class Setting:
 
 class CommandLineArgs:
     program_name: byte*
-    settings: List[Setting]
+    states: List[State]
     allow_dark: bool
     smoothstep: bool
 
-    def print(self: CommandLineArgs*) -> None:
+    @public
+    def print(self) -> None:
         printf("program_name = %s\n", self.program_name)
-        printf("allow_dark = %d\n", self.allow_dark)
-        printf("smoothstep = %d\n", self.smoothstep)
-        printf("settings (%zd):\n", self.settings.len)
+        printf("allow_dark = %s\n", "True" if self.allow_dark else "False")
+        printf("smoothstep = %s\n", "True" if self.smoothstep else "False")
+        printf("states (%zd):\n", self.states.len)
 
-        for i = 0; i < self.settings.len; i++:
-            s = &self.settings.ptr[i]
+        for i = 0; i < self.states.len; i++:
+            s = &self.states.ptr[i]
             printf(
                 "  [%d] R=%.3f  G=%.3f  B=%.3f",
                 i, s.r_multiplier, s.g_multiplier, s.b_multiplier,
@@ -141,12 +140,12 @@ def parse_time(args: CommandLineArgs*, s: byte*) -> int[2]:
                 colon_count = -1
                 break
 
-        if colon_count == 0:
-            free(s)
-            return [atoi(s), 0]
-        if colon_count == 1:
-            free(s)
-            return [atoi(s), atoi(&strstr(s, ":")[1])]
+        if colon_count == 0 or colon_count == 1:
+            hour = atoi(s)
+            minute = atoi(&strstr(s, ":")[1]) if colon_count == 1 else 0
+            if 0 <= hour and hour <= 24 and 0 <= minute and minute <= 60:
+                free(s)
+                return [hour, minute]
 
     msg: byte[300]
     snprintf(msg, sizeof(msg), "invalid time \"%s\" (try --help)", s)
@@ -155,43 +154,48 @@ def parse_time(args: CommandLineArgs*, s: byte*) -> int[2]:
 
 def parse_spec(args: CommandLineArgs*, s: byte*) -> None:
     s = strdup(s)
-    spec = Setting{}
+    state = State{}
 
     at = strstr(s, "@")
     if at != NULL:
         hour_and_minute = parse_time(args, &at[1])
-        spec.hour = hour_and_minute[0]
-        spec.minute = hour_and_minute[1]
+        state.hour = hour_and_minute[0]
+        state.minute = hour_and_minute[1]
         *at = '\0'
     else:
-        spec.hour = -1
-        spec.minute = -1
+        state.hour = -1
+        state.minute = -1
 
     trim_ascii_whitespace(s)
-    snprintf(spec.original_color_string, sizeof(spec.original_color_string), "%s", s)
+    snprintf(state.original_color_string, sizeof(state.original_color_string), "%s", s)
 
     parts = split_by_ascii_whitespace(s)
-    match parts.len:
-        case 1:
-            value = string_to_double_between_0_and_1(args, parts.ptr[0])
-            spec.r_multiplier = calculate_red_multiplier(value)
-            spec.g_multiplier = calculate_green_multiplier(value)
-            spec.b_multiplier = calculate_blue_multiplier(value)
-        case 3:
-            spec.r_multiplier = string_to_double_between_0_and_1(args, parts.ptr[0])
-            spec.g_multiplier = string_to_double_between_0_and_1(args, parts.ptr[1])
-            spec.b_multiplier = string_to_double_between_0_and_1(args, parts.ptr[2])
-        case _:
-            msg: byte[300]
-            snprintf(msg, sizeof(msg), "expected 1 or 3 numbers, got %zd numbers in \"%s\" (try --help)", s, parts.len)
-            fail(args, msg)
+    value: double
+
+    if parts.len == 1 and parse_double_between_0_and_1(parts.ptr[0], &value):
+        state.r_multiplier = calculate_red_multiplier(value)
+        state.g_multiplier = calculate_green_multiplier(value)
+        state.b_multiplier = calculate_blue_multiplier(value)
+    elif (
+        parts.len == 3
+        and parse_double_between_0_and_1(parts.ptr[0], &state.r_multiplier)
+        and parse_double_between_0_and_1(parts.ptr[1], &state.g_multiplier)
+        and parse_double_between_0_and_1(parts.ptr[2], &state.b_multiplier)
+    ):
+        pass  # all good, no need to do anything
+    else:
+        msg: byte[300]
+        snprintf(msg, sizeof(msg), "invalid state \"%s\" (try --help)", state.original_color_string)
+        fail(args, msg)
 
     free(parts.ptr)
     free(s)
-    args.settings.append(spec)
+    args.states.append(state)
 
 
-def main(argc: int, argv: byte**) -> int:
+# Public for tests
+@public
+def parse_command_line_args(argc: int, argv: byte**) -> CommandLineArgs:
     args = CommandLineArgs{program_name = argv[0]}
     msg: byte[300]
 
@@ -199,7 +203,7 @@ def main(argc: int, argv: byte**) -> int:
         match argv[i] with strcmp:
             case "--help":
                 print_help(args.program_name)
-                return 0
+                exit(0)
             case "--allow-dark":
                 args.allow_dark = True
             case "--smoothstep":
@@ -210,14 +214,21 @@ def main(argc: int, argv: byte**) -> int:
                     fail(&args, msg)
                 parse_spec(&args, argv[i])
 
-    if args.settings.len == 0:
-        fail(&args, "please specify how to color the screen (try --help)")
-
-    if args.settings.len == 1 and args.settings.ptr[0].hour >= 0:
-        fail(&args, "a time cannot be specified if you give just one state (try --help)")
+    match args.states.len:
+        case 0:
+            fail(&args, "please specify how to color the screen (try --help)")
+        case 1:
+            if args.states.ptr[0].hour >= 0 and args.states.ptr[0].minute >= 0:
+                fail(&args, "a time cannot be specified if you give just one state (try --help)")
+            if args.smoothstep:
+                fail(&args, "--smoothstep can be used only if you specify multiple states (try --help)")
+        case _:
+            for s = args.states.ptr; s < args.states.end(); s++:
+                if s.hour < 0 or s.minute < 0:
+                    fail(&args, "when you specify multiple states, you must use '@' to specify a time for each state")
 
     if not args.allow_dark:
-        for s = &args.settings.ptr[0]; s < args.settings.end(); s++:
+        for s = &args.states.ptr[0]; s < args.states.end(); s++:
             # Not perfect, but good enough for this.
             # Note that the magic numbers sum to 1 so this is a weighted average.
             brightness = 0.2126*s.r_multiplier + 0.7152*s.g_multiplier + 0.0722*s.b_multiplier
@@ -233,7 +244,10 @@ def main(argc: int, argv: byte**) -> int:
                 )
                 fail(&args, msg)
 
-    args.print()
+    return args
 
-    free(args.settings.ptr)
+
+def main(argc: int, argv: byte**) -> int:
+    args = parse_command_line_args(argc, argv)
+    args.print()
     return 0

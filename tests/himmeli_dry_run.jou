@@ -1,0 +1,9 @@
+# This is a program that parses and prints command-line arguments. It is used
+# to test the command-line argument parser without actually adjusting a screen.
+
+import "../src/main.jou"
+
+def main(argc: int, argv: byte**) -> int:
+    args = parse_command_line_args(argc, argv)
+    args.print()
+    return 0

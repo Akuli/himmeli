@@ -1,0 +1,165 @@
+# This file has commands and outputs. It is invoked to test the command line.
+#
+# In this file, please use himmeli_dry_run so that you don't actually adjust
+# the user's screens.
+
+$ ./himmeli_dry_run --help
+Usage:
+  ./himmeli_dry_run [options] "STATE"
+  ./himmeli_dry_run [options] "STATE1 @ hh:mm" "STATE2 @ hh:mm" ...
+
+Options:
+  --help          this message
+  --allow-dark    allow making the screen very dark
+  --smoothstep    use the smoothstep function instead of linear interpolation
+
+The simplest way to specify a state is a number between 0 and 1. Here 0 means
+black screen, 1 means reset, and values between 0 and 1 filter out mostly blue
+light. For example, I use 0.6 during the day to make the screen look comfy and
+easy on my eyes.
+
+The SETTING can also be R, G and B numbers between 0 and 1 separated by spaces.
+For example, "0.5 0.5 0.5" basically decreases brightness, and "1 1 0" filters
+out all blue light (probably not what you want).
+
+If you specify multiple states, they must have "@ hh:mm" (hour and minute) or
+"@ hh" (hour) at the end to specify when the state should apply: "0.6 @ 22"
+means that value 0.6 will be used if you run the command at 22:00 (10PM). The
+values are interpolated at other times (linearly by default).
+
+# Bad states without times
+$ ./himmeli_dry_run 2
+./himmeli_dry_run: invalid state "2" (try --help)
+$ ./himmeli_dry_run ""
+./himmeli_dry_run: invalid state "" (try --help)
+$ ./himmeli_dry_run "1 1"
+./himmeli_dry_run: invalid state "1 1" (try --help)
+$ ./himmeli_dry_run "1 1 1 1"
+./himmeli_dry_run: invalid state "1 1 1 1" (try --help)
+$ ./himmeli_dry_run "1 1 1 1 1"
+./himmeli_dry_run: invalid state "1 1 1 1 1" (try --help)
+$ ./himmeli_dry_run inf
+./himmeli_dry_run: invalid state "inf" (try --help)
+$ ./himmeli_dry_run nan
+./himmeli_dry_run: invalid state "nan" (try --help)
+
+# Unknown kinds of arguments
+$ ./himmeli_dry_run -1
+./himmeli_dry_run: unknown option "-1" (try --help)
+$ ./himmeli_dry_run --asdf
+./himmeli_dry_run: unknown option "--asdf" (try --help)
+
+# Wrong number of arguments / missing times
+$ ./himmeli_dry_run
+./himmeli_dry_run: please specify how to color the screen (try --help)
+
+# Missing time
+$ ./himmeli_dry_run 1 "1 @ 12:34"
+./himmeli_dry_run: when you specify multiple states, you must use '@' to specify a time for each state
+$ ./himmeli_dry_run 1 "1 @ 12:34" "0.5 @ 23:45"
+./himmeli_dry_run: when you specify multiple states, you must use '@' to specify a time for each state
+
+# Unnecessary time
+$ ./himmeli_dry_run "1 @ 12:34"
+./himmeli_dry_run: a time cannot be specified if you give just one state (try --help)
+
+# Bad time
+$ ./himmeli_dry_run "1 @ 12:34" "0.5 @ 23:78"
+./himmeli_dry_run: invalid time "23:78" (try --help)
+$ ./himmeli_dry_run "1 @ 12:34" "0.5 @ -1:05"
+./himmeli_dry_run: invalid time "-1:05" (try --help)
+$ ./himmeli_dry_run "1 @ 12:34" "0.5 @ 5:-1"
+./himmeli_dry_run: invalid time "5:-1" (try --help)
+$ ./himmeli_dry_run "1 @ 12:34" "0.5 @ 23 :45"
+./himmeli_dry_run: invalid time "23 :45" (try --help)
+$ ./himmeli_dry_run "1 @ 12:34" "0.5 @ 12:34:56"
+./himmeli_dry_run: invalid time "12:34:56" (try --help)
+
+# Allowing whitespace and other sloppiness to some extent
+$ ./himmeli_dry_run "  1 1 1@12:34 " ".6@23:45"
+program_name = ./himmeli_dry_run
+allow_dark = False
+smoothstep = False
+states (2):
+  [0] R=1.000  G=1.000  B=1.000  @ 12:34
+  [1] R=1.000  G=0.764  B=0.598  @ 23:45
+
+# Time is not octal when it has a leading zero, so 09 is allowed
+$ ./himmeli_dry_run "0.5 @ 09:01 " "1 @ 9:2"
+program_name = ./himmeli_dry_run
+allow_dark = False
+smoothstep = False
+states (2):
+  [0] R=1.000  G=0.686  B=0.400  @ 09:01
+  [1] R=1.000  G=1.000  B=1.000  @ 09:02
+
+$ ./himmeli_dry_run --asdf
+./himmeli_dry_run: unknown option "--asdf" (try --help)
+
+$ ./himmeli_dry_run 1
+program_name = ./himmeli_dry_run
+allow_dark = False
+smoothstep = False
+states (1):
+  [0] R=1.000  G=1.000  B=1.000  (no time)
+
+$ ./himmeli_dry_run 0.6
+program_name = ./himmeli_dry_run
+allow_dark = False
+smoothstep = False
+states (1):
+  [0] R=1.000  G=0.764  B=0.598  (no time)
+
+# The "allow dark" flag
+$ ./himmeli_dry_run 0.01
+./himmeli_dry_run: refusing because "0.01" would make the screen very dark, use --allow-dark if that's really what you want
+$ ./himmeli_dry_run --allow-dark 0.01
+program_name = ./himmeli_dry_run
+allow_dark = True
+smoothstep = False
+states (1):
+  [0] R=0.067  G=0.002  B=0.000  (no time)
+
+# The "allow dark" flag at any time
+$ ./himmeli_dry_run "0.01 @ 12:34" "1 @ 23:45"
+./himmeli_dry_run: refusing because "0.01" would make the screen very dark, use --allow-dark if that's really what you want
+$ ./himmeli_dry_run "1 @ 12:34" "0.01 @ 23:45"
+./himmeli_dry_run: refusing because "0.01" would make the screen very dark, use --allow-dark if that's really what you want
+$ ./himmeli_dry_run "1 @ 12:34" "0.01 @ 23:45" --allow-dark
+program_name = ./himmeli_dry_run
+allow_dark = True
+smoothstep = False
+states (2):
+  [0] R=1.000  G=1.000  B=1.000  @ 12:34
+  [1] R=0.067  G=0.002  B=0.000  @ 23:45
+
+# Turning off all but one color to see what that does, good for learning about the program
+$ ./himmeli_dry_run "1 0 0"
+program_name = ./himmeli_dry_run
+allow_dark = False
+smoothstep = False
+states (1):
+  [0] R=1.000  G=0.000  B=0.000  (no time)
+$ ./himmeli_dry_run "0 1 0"
+program_name = ./himmeli_dry_run
+allow_dark = False
+smoothstep = False
+states (1):
+  [0] R=0.000  G=1.000  B=0.000  (no time)
+$ ./himmeli_dry_run "0 0 1"
+program_name = ./himmeli_dry_run
+allow_dark = False
+smoothstep = False
+states (1):
+  [0] R=0.000  G=0.000  B=1.000  (no time)
+
+# Test smoothstep
+$ ./himmeli_dry_run --smoothstep "1"
+./himmeli_dry_run: --smoothstep can be used only if you specify multiple states (try --help)
+$ ./himmeli_dry_run --smoothstep "1 @ 12:34" "0.5 @ 23:45"
+program_name = ./himmeli_dry_run
+allow_dark = False
+smoothstep = True
+states (2):
+  [0] R=1.000  G=1.000  B=1.000  @ 12:34
+  [1] R=1.000  G=0.686  B=0.400  @ 23:45
