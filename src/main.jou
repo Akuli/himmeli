@@ -1,10 +1,14 @@
 import "stdlib/ascii.jou"
+import "stdlib/assert.jou"
 import "stdlib/io.jou"
 import "stdlib/list.jou"
 import "stdlib/math.jou"
 import "stdlib/mem.jou"
 import "stdlib/str.jou"
 import "stdlib/process.jou"
+
+import "./xcb.jou"
+import "./get_time.jou"
 
 
 def fail(args: CommandLineArgs*, msg: byte*) -> noreturn:
@@ -244,10 +248,64 @@ def parse_command_line_args(argc: int, argv: byte**) -> CommandLineArgs:
                 )
                 fail(&args, msg)
 
+    # TODO: duplicate time error
+
     return args
+
+
+def lerp(a: double, b: double, t: double) -> double:
+    return a + (b - a)*t
+
+
+# Returns [r, g, b] multipliers
+def interpolate_states(args: CommandLineArgs*) -> double[3]:
+    now_hm = get_current_hour_and_minute()
+    now = now_hm[0] * 60 + now_hm[1]
+
+    # Find the two closest states surrounding "now" on each side
+    prev: State* = NULL
+    next: State* = NULL
+    prev_diff = 24*60
+    next_diff = 24*60
+
+    for s = args.states.ptr; s < args.states.end(); s++:
+        s_time = s.hour * 60 + s.minute
+        if s_time == now:
+            # Use this as is, do not divide by zero below! :)
+            return [s.r_multiplier, s.g_multiplier, s.b_multiplier]
+
+        # Compute forward and backward distances with wrap-around.
+        # Jou's % operator makes this easier than this would be in C.
+        forward = (s_time - now) % (24*60)
+        backward = (now - s_time) % (24*60)
+        assert forward > 0
+        assert backward > 0
+
+        if backward < prev_diff:
+            prev_diff = backward
+            prev = s
+
+        if forward < next_diff:
+            next_diff = forward
+            next = s
+
+    assert prev != NULL
+    assert next != NULL
+
+    # Compute interpolation factor t, so that t=0 means prev and t=1 means next
+    t = (prev_diff as double) / (prev_diff + next_diff)
+    if args.smoothstep:
+        t = t * t * (3 - 2*t)
+
+    return [
+        lerp(prev.r_multiplier, next.r_multiplier, t),
+        lerp(prev.g_multiplier, next.g_multiplier, t),
+        lerp(prev.b_multiplier, next.b_multiplier, t),
+    ]
 
 
 def main(argc: int, argv: byte**) -> int:
     args = parse_command_line_args(argc, argv)
-    args.print()
+    multipliers: double[3] = interpolate_states(&args)
+    set_multipliers_with_xcb(multipliers[0], multipliers[1], multipliers[2])
     return 0

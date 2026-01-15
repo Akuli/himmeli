@@ -1,0 +1,33 @@
+# TODO(Jou): this whole file content belongs to stdlib/time.jou
+
+import "stdlib/io.jou"
+import "stdlib/process.jou"
+import "stdlib/time.jou"
+
+class tm:
+    tm_sec: int
+    tm_min: int
+    tm_hour: int
+    tm_mday: int
+    tm_mon: int
+    tm_year: int
+    tm_wday: int
+    tm_yday: int
+    tm_isdst: int
+
+    # There may be additional fields (e.g. tm_gmtoff, tm_zone), ignore them
+    _padding: byte[100]
+
+
+declare localtime(timer: int64*) -> tm*
+
+@public
+def get_current_hour_and_minute() -> int[2]:
+    now = time(NULL)
+
+    t = localtime(&now)
+    if t == NULL:
+        fprintf(get_stderr(), "error: localtime() returned NULL\n")
+        exit(1)
+
+    return [t.tm_hour, t.tm_min]
