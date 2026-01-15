@@ -87,4 +87,12 @@ A similar word "himmennin" means a dimmer.
 Thanks to [taahol](https://github.com/taahol) for the name suggestion.
 
 
-## Developing
+## Tests
+
+Run tests with `jou run_tests.jou`.
+This compiles [tests/himmeli_dry_run.jou](tests/himmeli_dry_run.jou),
+and then runs commands in [tests/commands.txt](tests/commands.txt)
+and checks that they output the correct things.
+
+Currently all tests check that command-line arguments are parsed correctly,
+and IMO that's the only thing in this project that really needs testing.
