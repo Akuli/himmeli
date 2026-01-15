@@ -31,7 +31,7 @@ This program is written in [my Jou programming language](https://github.com/Akul
     ```
 3. Clone the repository: `git clone https://github.com/Akuli/himmeli`
 4. Go to the folder you cloned: `cd himmeli`
-5. Compile: `jou -o himmeli himmeli.jou`
+5. Compile: `jou -o himmeli src/main.jou`
 6. Try it: `./himmeli 0.6` (use `./himmeli 1` to restore the defaults)
 7. Configure something to run `himmeli` automatically in whatever way you want (see below)
 
