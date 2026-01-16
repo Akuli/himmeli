@@ -99,6 +99,8 @@ class State:
     r_multiplier: double
     g_multiplier: double
     b_multiplier: double
+    visibility_value: double  # if only one number, this is it, otherwise this is -1
+
     original_color_string: byte[100]
 
     hour: int
@@ -119,8 +121,8 @@ class CommandLineArgs:
         for i = 0; i < self.states.len; i++:
             s = &self.states.ptr[i]
             printf(
-                "  [%d] R=%.3f  G=%.3f  B=%.3f",
-                i, s.r_multiplier, s.g_multiplier, s.b_multiplier,
+                "  [%d]  R=%.3f  G=%.3f  B=%.3f  Vis=%.3f",
+                i, s.r_multiplier, s.g_multiplier, s.b_multiplier, s.visibility_value,
             )
             if s.hour >= 0 and s.minute >= 0:
                 printf("  @ %02d:%02d\n", s.hour, s.minute)
@@ -171,19 +173,23 @@ def parse_spec(args: CommandLineArgs*, s: byte*) -> None:
     snprintf(state.original_color_string, sizeof(state.original_color_string), "%s", s)
 
     parts = split_by_ascii_whitespace(s)
-    value: double
+    r, g, b, vis: double
 
-    if parts.len == 1 and parse_double_between_0_and_1(parts.ptr[0], &value):
-        state.r_multiplier = calculate_red_multiplier(value)
-        state.g_multiplier = calculate_green_multiplier(value)
-        state.b_multiplier = calculate_blue_multiplier(value)
+    if parts.len == 1 and parse_double_between_0_and_1(parts.ptr[0], &vis):
+        state.r_multiplier = calculate_red_multiplier(vis)
+        state.g_multiplier = calculate_green_multiplier(vis)
+        state.b_multiplier = calculate_blue_multiplier(vis)
+        state.visibility_value = vis
     elif (
         parts.len == 3
-        and parse_double_between_0_and_1(parts.ptr[0], &state.r_multiplier)
-        and parse_double_between_0_and_1(parts.ptr[1], &state.g_multiplier)
-        and parse_double_between_0_and_1(parts.ptr[2], &state.b_multiplier)
+        and parse_double_between_0_and_1(parts.ptr[0], &r)
+        and parse_double_between_0_and_1(parts.ptr[1], &g)
+        and parse_double_between_0_and_1(parts.ptr[2], &b)
     ):
-        pass  # all good, no need to do anything
+        state.r_multiplier = r
+        state.g_multiplier = g
+        state.b_multiplier = b
+        state.visibility_value = -1
     else:
         msg: byte[300]
         snprintf(msg, sizeof(msg), "invalid state \"%s\" (try --help)", state.original_color_string)
@@ -288,11 +294,22 @@ def interpolate_states(args: CommandLineArgs*) -> double[3]:
     # Compute interpolation factor t, so that t=0 means prev and t=1 means next
     t = (prev_diff as double) / (prev_diff + next_diff)
 
-    return [
-        lerp(prev.r_multiplier, next.r_multiplier, t),
-        lerp(prev.g_multiplier, next.g_multiplier, t),
-        lerp(prev.b_multiplier, next.b_multiplier, t),
-    ]
+    # When possible, interpolate visibility values, not RGB. For example,
+    # interpolating between visibility values 0 and 1 produces proper blue
+    # light filtering, not just brightness adjustments.
+    if prev.visibility_value >= 0 and next.visibility_value >= 0:
+        vis = lerp(prev.visibility_value, next.visibility_value, t)
+        return [
+            calculate_red_multiplier(vis),
+            calculate_green_multiplier(vis),
+            calculate_blue_multiplier(vis),
+        ]
+    else:
+        return [
+            lerp(prev.r_multiplier, next.r_multiplier, t),
+            lerp(prev.g_multiplier, next.g_multiplier, t),
+            lerp(prev.b_multiplier, next.b_multiplier, t),
+        ]
 
 
 def main(argc: int, argv: byte**) -> int:
