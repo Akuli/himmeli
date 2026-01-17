@@ -52,7 +52,7 @@ def main() -> int:
     chdir("tests")
 
     # Compile himmeli_dry_run program
-    assert system("~/jou/jou -o himmeli_dry_run himmeli_dry_run.jou") == 0
+    assert system("jou -o himmeli_dry_run himmeli_dry_run.jou") == 0
 
     commands_txt = fopen("commands.txt", "r")
     assert commands_txt != NULL
