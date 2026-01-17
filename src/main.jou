@@ -121,7 +121,7 @@ class CommandLineArgs:
         for i = 0; i < self.states.len; i++:
             s = &self.states.ptr[i]
             printf(
-                "  [%d]  R=%.3f  G=%.3f  B=%.3f  Vis=%.3f",
+                "  [%d] R=%.3f  G=%.3f  B=%.3f  Vis=%.3f",
                 i, s.r_multiplier, s.g_multiplier, s.b_multiplier, s.visibility_value,
             )
             if s.hour >= 0 and s.minute >= 0:
