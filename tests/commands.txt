@@ -79,16 +79,16 @@ $ ./himmeli_dry_run "  1 1 1@12:34 " ".6@23:45"
 program_name = ./himmeli_dry_run
 allow_dark = False
 states (2):
-  [0] R=1.000  G=1.000  B=1.000  @ 12:34
-  [1] R=1.000  G=0.764  B=0.598  @ 23:45
+  [0] R=1.000  G=1.000  B=1.000  Vis=-1.000  @ 12:34
+  [1] R=1.000  G=0.764  B=0.598  Vis=0.600  @ 23:45
 
 # Time is not octal when it has a leading zero, so 09 is allowed
 $ ./himmeli_dry_run "0.5 @ 09:01 " "1 @ 9:2"
 program_name = ./himmeli_dry_run
 allow_dark = False
 states (2):
-  [0] R=1.000  G=0.686  B=0.400  @ 09:01
-  [1] R=1.000  G=1.000  B=1.000  @ 09:02
+  [0] R=1.000  G=0.686  B=0.400  Vis=0.500  @ 09:01
+  [1] R=1.000  G=1.000  B=1.000  Vis=1.000  @ 09:02
 
 $ ./himmeli_dry_run --asdf
 ./himmeli_dry_run: unknown option "--asdf" (try --help)
@@ -97,13 +97,13 @@ $ ./himmeli_dry_run 1
 program_name = ./himmeli_dry_run
 allow_dark = False
 states (1):
-  [0] R=1.000  G=1.000  B=1.000  (no time)
+  [0] R=1.000  G=1.000  B=1.000  Vis=1.000  (no time)
 
 $ ./himmeli_dry_run 0.6
 program_name = ./himmeli_dry_run
 allow_dark = False
 states (1):
-  [0] R=1.000  G=0.764  B=0.598  (no time)
+  [0] R=1.000  G=0.764  B=0.598  Vis=0.600  (no time)
 
 # The "allow dark" flag
 $ ./himmeli_dry_run 0.01
@@ -112,7 +112,7 @@ $ ./himmeli_dry_run --allow-dark 0.01
 program_name = ./himmeli_dry_run
 allow_dark = True
 states (1):
-  [0] R=0.067  G=0.002  B=0.000  (no time)
+  [0] R=0.067  G=0.002  B=0.000  Vis=0.010  (no time)
 
 # The "allow dark" flag at any time
 $ ./himmeli_dry_run "0.01 @ 12:34" "1 @ 23:45"
@@ -123,22 +123,22 @@ $ ./himmeli_dry_run "1 @ 12:34" "0.01 @ 23:45" --allow-dark
 program_name = ./himmeli_dry_run
 allow_dark = True
 states (2):
-  [0] R=1.000  G=1.000  B=1.000  @ 12:34
-  [1] R=0.067  G=0.002  B=0.000  @ 23:45
+  [0] R=1.000  G=1.000  B=1.000  Vis=1.000  @ 12:34
+  [1] R=0.067  G=0.002  B=0.000  Vis=0.010  @ 23:45
 
 # Turning off all but one color to see what that does, good for learning about the program
 $ ./himmeli_dry_run "1 0 0"
 program_name = ./himmeli_dry_run
 allow_dark = False
 states (1):
-  [0] R=1.000  G=0.000  B=0.000  (no time)
+  [0] R=1.000  G=0.000  B=0.000  Vis=-1.000  (no time)
 $ ./himmeli_dry_run "0 1 0"
 program_name = ./himmeli_dry_run
 allow_dark = False
 states (1):
-  [0] R=0.000  G=1.000  B=0.000  (no time)
+  [0] R=0.000  G=1.000  B=0.000  Vis=-1.000  (no time)
 $ ./himmeli_dry_run "0 0 1"
 program_name = ./himmeli_dry_run
 allow_dark = False
 states (1):
-  [0] R=0.000  G=0.000  B=1.000  (no time)
+  [0] R=0.000  G=0.000  B=1.000  Vis=-1.000  (no time)
