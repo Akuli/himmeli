@@ -82,8 +82,10 @@ See also `./himmeli --help`.
 
 ## Name
 
-In Finnish, "himmeli" is an informal word that basically means "thingy".
-A similar word "himmennin" means a dimmer.
+In the Finnish language, "himmeli" means the Finnish variant of a [straw mobile](https://en.wikipedia.org/wiki/Straw_mobile).
+It is similar to the informal word "hommeli" which means "thingy" or "contraption",
+and "himmennin" which means a dimmer.
+
 Thanks to [taahol](https://github.com/taahol) for the name suggestion.
 
 
