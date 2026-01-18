@@ -160,7 +160,6 @@ def set_loop_time(args: CommandLineArgs*, arg: byte*) -> None:
 
         match suffix with strcmp:
             case "s" | "sec" | "second" | "seconds":
-                # TODO: test this
                 fail(args, "specifying loop time in seconds is not supported, use minutes or hours")
             case "m" | "min" | "minute" | "minutes":
                 args.loop_minutes = atoi(arg)
@@ -240,7 +239,6 @@ def parse_command_line_args(argc: int, argv: byte**) -> CommandLineArgs:
                 args.dry_run = True
             case "--loop":
                 if i == argc:
-                    # TODO: test this
                     fail(&args, "missing time after --loop (try --help)")
                 set_loop_time(&args, argv[i++])
             case _:
@@ -359,7 +357,7 @@ def interpolate_states(args: CommandLineArgs*, now_minute_of_day: int) -> State:
         }
 
 
-# TODO: stdlib?
+# TODO(Jou): put this to stdlib?
 declare sleep(seconds: uint32) -> uint32
 
 def sleep_minutes(minutes: uint32) -> None:

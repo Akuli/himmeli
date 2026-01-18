@@ -138,6 +138,7 @@ expect 'Would multiply red by 0.00, green by 1.00 and blue by 0.00.' from $himme
 expect 'Would multiply red by 0.00, green by 0.00 and blue by 1.00.' from $himmeli "0 0 1"
 
 section "The --loop flag"
+expect './himmeli: missing time after --loop (try --help)' from $himmeli --loop
 expect './himmeli: invalid loop time "asd", try e.g. 3min or 1h' from $himmeli --loop asd
 expect './himmeli: invalid loop time "asd", try e.g. 3min or 1h' from $himmeli --loop=asd
 expect './himmeli: invalid loop time "", try e.g. 3min or 1h' from $himmeli --loop ""

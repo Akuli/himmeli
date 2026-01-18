@@ -111,9 +111,14 @@ and "himmennin" which means a dimmer.
 Thanks to [taahol](https://github.com/taahol) for the name suggestion.
 
 
-## Tests
+## Developing
 
-Run `./tests.sh`.
+To run tests, simply run `./tests.sh`.
 That script runs `./himmeli --dry-run` with various other arguments after it
 and compares the output to hard-coded strings with `diff`.
 This means that tests only check the behavior of `--dry-run`, and IMO that's fine.
+
+Use `# TODO(Jou):` when you work around limitations of the Jou compiler or programming language,
+and plain `# TODO:` comments for everything else.
+This way I can search for `TODO(Jou)` when upgrading the Jou version
+to see if any workarounds can be removed.
