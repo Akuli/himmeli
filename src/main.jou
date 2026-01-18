@@ -280,7 +280,23 @@ def parse_command_line_args(argc: int, argv: byte**) -> CommandLineArgs:
                 )
                 fail(&args, msg)
 
-    # TODO: duplicate time error
+    # Check for duplicate times
+    for i = 0; i < args.states.len; i++:
+        for j = i + 1; j < args.states.len; j++:
+            s1 = &args.states.ptr[i]
+            s2 = &args.states.ptr[j]
+            if s1.hour != -1 and s2.hour != -1 and s1.hour == s2.hour and s1.minute == s2.minute:
+                snprintf(
+                    msg, sizeof(msg),
+                    "duplicate time: \"%s @ %02d:%02d\" and \"%s @ %02d:%02d\" both specify the same time",
+                    s1.original_color_string,
+                    s1.hour,
+                    s1.minute,
+                    s2.original_color_string,
+                    s2.hour,
+                    s2.minute,
+                )
+                fail(&args, msg)
 
     return args
 

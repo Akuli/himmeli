@@ -113,6 +113,10 @@ expect './himmeli: invalid time "12:34:56" (try --help)' from $himmeli "1 @ 12:3
 expect 'Would multiply red by x.xx, green by x.xx and blue by x.xx.' from remove_details $himmeli '  1 1   1@12:34' '.6@   23:45 '
 # Time is not octal when it has a leading zero, so 09 is allowed
 expect 'Would multiply red by x.xx, green by x.xx and blue by x.xx.' from remove_details $himmeli "0.5 @ 09:01 " "1 @ 9:2"
+# Duplicate time error
+expect './himmeli: duplicate time: "0.6 @ 01:00" and "1.0 @ 01:00" both specify the same time' from $himmeli "0.6 @ 01:00" "1.0 @ 01:00"
+expect './himmeli: duplicate time: "0.5 @ 12:34" and "1.0 @ 12:34" both specify the same time' from $himmeli "0.5 @ 12:34" "0.8 @ 15:00" "1.0 @ 12:34"
+expect './himmeli: duplicate time: "0.2 @ 23:00" and "0.9 @ 23:00" both specify the same time' from $himmeli "0.2 @ 23:00" "0.5 @ 12:00" "0.9 @ 23:00"
 
 section "Simple and correct"
 expect 'Would multiply red by 1.00, green by 0.23 and blue by 0.02.' from $himmeli 0.2
