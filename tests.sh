@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# When any command fails, tests stop with a failure
 set -e
 
 GREEN="\x1b[32m"
