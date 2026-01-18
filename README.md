@@ -49,13 +49,23 @@ There are two main ways to specify how colors should be adjusted:
     `./himmeli "1 1 0"` removes all blue light (probably not what you want), and
     `./himmeli "0 0 0"` refuses to give you a completely black screen unless you use `--allow-dark`.
 
-You can also give multiple of these specifications with a timestamp after each one.
-If you run this program at exactly one of those times, then that value is used,
-and the values are linearly interpolated between those times.
+If you want to always adjust your screen with `himmeli`,
+configure something to run a `himmeli` command when you log in.
+You probably need to specify a full path to the `himmeli` executable.
+For example, to make your screen always comfy,
+set the following command to run every time you log in:
+
+```
+/full/path/to/himmeli_folder/himmeli 0.6
+```
+
+You can also specify multiple states with `@` and a timestamp after each one:
+`"0.6 @ 10"` applies `0.6` if you run the program at 10AM.
+The values are linearly interpolated between the times that you specify.
 For example, consider the following command:
 
 ```
-$ ./himmeli "0.6 @ 22" "0.3 23:30" "0.3 @ 6" "0.6 @ 7"
+$ ./himmeli "0.6 @ 22" "0.3 @ 23:30" "0.3 @ 6" "0.6 @ 7"
 ```
 
 Here's what this does depending on the time of day.
@@ -63,12 +73,24 @@ Here's what this does depending on the time of day.
 
 | Time          | Time              | What the above command basically does     |
 |---------------|-------------------|-------------------------------------------|
-| 22:00         | 10 PM             | `./himmeli 0.6`                           |
+| 7:00 to 22:00 | 7 AM to 10 PM     | `./himmeli 0.6`                           |
 | 22:30         | 10:30 PM          | `./himmeli 0.5`                           |
 | 23:00         | 11 PM             | `./himmeli 0.4`                           |
 | 23:30 to 6:00 | 11:30 PM to 6 AM  | `./himmeli 0.3`                           |
 | 6:30          | 6:30 AM           | `./himmeli 0.45`                          |
-| 7:00 to 22:00 | 7 AM to 10 PM     | `./himmeli 0.6`                           |
+| 7:00          | 7 AM              | `./himmeli 0.6`                           |
+
+If you want to always adjust your screen with `himmeli` in this mode,
+you probably want to also use `--loop 3min` or similar.
+The `--loop` option causes `himmeli` to run "forever" (that is, until interrupted)
+and adjust your screen periodically.
+For example, to always update your screen according to the above table,
+refreshing every 3 minutes,
+set the following command to run every time you log in:
+
+```
+/full/path/to/himmeli_folder/himmeli --loop 3min "0.6 @ 22" "0.3 @ 23:30" "0.3 @ 6" "0.6 @ 7"
+```
 
 See also `./himmeli --help`.
 
