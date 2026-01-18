@@ -1,8 +1,9 @@
 # TODO(Jou): this whole file content belongs to stdlib/time.jou
 
-import "stdlib/io.jou"
+import "stdlib/assert.jou"
 import "stdlib/process.jou"
 import "stdlib/time.jou"
+import "stdlib/str.jou"
 
 class tm:
     tm_sec: int
@@ -22,12 +23,17 @@ class tm:
 declare localtime(timer: int64*) -> tm*
 
 @public
-def get_current_hour_and_minute() -> int[2]:
-    now = time(NULL)
-
-    t = localtime(&now)
-    if t == NULL:
-        fprintf(get_stderr(), "error: localtime() returned NULL\n")
-        exit(1)
-
-    return [t.tm_hour, t.tm_min]
+def get_minute_of_day() -> int:
+    env_time = getenv("HIMMELI_OVERRIDE_TIME")
+    if env_time == NULL:
+        # The usual case.
+        now = time(NULL)
+        t = localtime(&now)
+        assert t != NULL
+        return 60*t.tm_hour + t.tm_min
+    else:
+        # This is what happens during tests.
+        hh, mm: int
+        ret = sscanf(env_time, "%d:%d", &hh, &mm)
+        assert ret == 2
+        return 60*hh + mm
