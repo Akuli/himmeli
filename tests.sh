@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# This file has commands and outputs. It is invoked to test the command line.
-#
-# In this file, please use himmeli_dry_run so that you don't actually adjust
-# the user's screens.
-
 set -e
 
 GREEN="\x1b[32m"
