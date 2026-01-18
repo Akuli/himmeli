@@ -114,23 +114,6 @@ class CommandLineArgs:
     allow_dark: bool
     dry_run: bool
 
-    @public
-    def print(self) -> None:
-        printf("program_name = %s\n", self.program_name)
-        printf("allow_dark = %s\n", "True" if self.allow_dark else "False")
-        printf("states (%zd):\n", self.states.len)
-
-        for i = 0; i < self.states.len; i++:
-            s = &self.states.ptr[i]
-            printf(
-                "  [%d] R=%.3f  G=%.3f  B=%.3f  Vis=%.3f",
-                i, s.r_multiplier, s.g_multiplier, s.b_multiplier, s.visibility_value,
-            )
-            if s.hour >= 0 and s.minute >= 0:
-                printf("  @ %02d:%02d\n", s.hour, s.minute)
-            else:
-                printf("  (no time)\n")
-
 
 def parse_time(args: CommandLineArgs*, s: byte*) -> int[2]:
     s = strdup(s)
