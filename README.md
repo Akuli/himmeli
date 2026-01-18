@@ -92,6 +92,6 @@ Thanks to [taahol](https://github.com/taahol) for the name suggestion.
 ## Tests
 
 Run `./tests.sh`.
-That script runs `himmeli --dry-run` with various other arguments after it
+That script runs `./himmeli --dry-run` with various other arguments after it
 and compares the output to hard-coded strings with `diff`.
 This means that tests only check the behavior of `--dry-run`, and IMO that's fine.
