@@ -47,11 +47,6 @@ function expect() {
     echo -ne "${GREEN}.${RESET}"
 }
 
-# TODO: delete this, use HIMMELI_OVERRIDE_TIME instead
-function remove_details() {
-    "$@" | sed 's/[0-9]\.[0-9][0-9]/x.xx/g'
-}
-
 section "Help"
 help_text="$(cat <<'EOF'
 Usage:
@@ -110,9 +105,11 @@ expect './himmeli: invalid time "-1:05" (try --help)' from $himmeli "1 @ 12:34" 
 expect './himmeli: invalid time "5:-1" (try --help)' from $himmeli "1 @ 12:34" "0.5 @ 5:-1"
 expect './himmeli: invalid time "23 :45" (try --help)' from $himmeli "1 @ 12:34" "0.5 @ 23 :45"
 expect './himmeli: invalid time "12:34:56" (try --help)' from $himmeli "1 @ 12:34" "0.5 @ 12:34:56"
-expect 'Would multiply red by x.xx, green by x.xx and blue by x.xx.' from remove_details $himmeli '  1 1   1@12:34' '.6@   23:45 '
+HIMMELI_OVERRIDE_TIME=12:34 \
+expect 'Would multiply red by 1.00, green by 1.00 and blue by 1.00.' from $himmeli '  1 1   1@12:34' '.6@   23:45 '
 # Time is not octal when it has a leading zero, so 09 is allowed
-expect 'Would multiply red by x.xx, green by x.xx and blue by x.xx.' from remove_details $himmeli "0.5 @ 09:01 " "1 @ 9:2"
+HIMMELI_OVERRIDE_TIME=9:00 \
+expect 'Would multiply red by 0.75, green by 0.75 and blue by 0.75.' from $himmeli "0.5 0.5 0.5 @ 8:59 " "1 1 1 @ 9:01"
 expect './himmeli: the time 01:00 cannot be specified twice' from $himmeli "0.5 @ 01:00" "0.6 @ 01:00"
 expect './himmeli: the time 12:34 cannot be specified twice' from $himmeli "0.5 @ 12:34" "0.6 @ 01:00" "0.7 @ 12:34"
 
@@ -130,8 +127,10 @@ expect "./himmeli: refusing because \"0.01\" would make the screen very dark, us
 expect "./himmeli: refusing because \"0.01\" would make the screen very dark, use --allow-dark if that's really what you want" from $himmeli "1 @ 12:34" "0.01 @ 23:45"
 # Flag given as needed
 expect 'Would multiply red by 0.07, green by 0.00 and blue by 0.00.' from $himmeli 0.01 --allow-dark
-expect 'Would multiply red by x.xx, green by x.xx and blue by x.xx.' from remove_details $himmeli --allow-dark "0.01 @ 12:34" "1 @ 23:45"
-expect 'Would multiply red by x.xx, green by x.xx and blue by x.xx.' from remove_details $himmeli --allow-dark "1 @ 12:34" "0.01 @ 23:45"
+HIMMELI_OVERRIDE_TIME=11:11 \
+expect 'Would multiply red by 0.78, green by 0.10 and blue by 0.00.' from $himmeli --allow-dark "0.01 @ 12:34" "1 @ 23:45"
+HIMMELI_OVERRIDE_TIME=11:11 \
+expect 'Would multiply red by 1.00, green by 0.91 and blue by 0.95.' from $himmeli --allow-dark "1 @ 12:34" "0.01 @ 23:45"
 # These should not trigger the --allow-dark mechanism
 expect 'Would multiply red by 1.00, green by 0.00 and blue by 0.00.' from $himmeli "1 0 0"
 expect 'Would multiply red by 0.00, green by 1.00 and blue by 0.00.' from $himmeli "0 1 0"
