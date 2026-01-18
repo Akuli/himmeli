@@ -28,11 +28,11 @@ jobs:
     - name: Add Jou to PATH
       run: echo "$(pwd)/jou" >> $GITHUB_PATH
 
-    - name: Run tests
-      run: jou run_tests.jou
-
     - name: Compile main executable
       run: jou -o himmeli src/main.jou
 
     - name: Run with --help option
       run: ./himmeli --help
+
+    - name: Run tests
+      run: ./tests.sh

@@ -320,7 +320,7 @@ def main(argc: int, argv: byte**) -> int:
     args = parse_command_line_args(argc, argv)
     multipliers: double[3] = interpolate_states(&args)
     if args.dry_run:
-        printf("This would multiply red by %.2f, green by %.2f and blue by %.2f.\n", multipliers[0], multipliers[1], multipliers[2])
+        printf("Would multiply red by %.2f, green by %.2f and blue by %.2f.\n", multipliers[0], multipliers[1], multipliers[2])
     else:
         set_multipliers_with_xcb(multipliers[0], multipliers[1], multipliers[2])
     return 0

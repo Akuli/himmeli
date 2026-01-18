@@ -91,10 +91,7 @@ Thanks to [taahol](https://github.com/taahol) for the name suggestion.
 
 ## Tests
 
-Run tests with `jou run_tests.jou`.
-This compiles [tests/himmeli_dry_run.jou](tests/himmeli_dry_run.jou),
-and then runs commands in [tests/commands.txt](tests/commands.txt)
-and checks that they output the correct things.
-
-Currently all tests check that command-line arguments are parsed correctly,
-and IMO that's the only thing in this project that really needs testing.
+Run `./tests.sh`.
+That script runs `himmeli --dry-run` with various other arguments after it
+and compares the output to hard-coded strings with `diff`.
+This means that tests only check the behavior of `--dry-run`, and IMO that's fine.
