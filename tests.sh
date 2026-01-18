@@ -25,7 +25,7 @@ echo "Compiling: $command"
 $command
 
 # Tests are always invoked through --dry-run, so there should be no way for
-# them to do something during tests.
+# them to actually adjust your screens.
 himmeli="./himmeli --dry-run"
 
 function section() {
