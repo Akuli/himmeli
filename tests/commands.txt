@@ -11,6 +11,7 @@ Usage:
 Options:
   --help          this message
   --allow-dark    allow making the screen very dark
+  --dry-run       don't adjust screens, describe what would be done
 
 The simplest way to specify a state is a number between 0 and 1. Here 0 means
 black screen, 1 means reset, and values between 0 and 1 filter out mostly blue

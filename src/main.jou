@@ -79,6 +79,7 @@ def print_help(program_name: byte*) -> None:
     printf("Options:\n")
     printf("  --help          this message\n")
     printf("  --allow-dark    allow making the screen very dark\n")
+    printf("  --dry-run       don't adjust screens, describe what would be done\n")
     printf("\n")
     printf("The simplest way to specify a state is a number between 0 and 1. Here 0 means\n")
     printf("black screen, 1 means reset, and values between 0 and 1 filter out mostly blue\n")
@@ -111,6 +112,7 @@ class CommandLineArgs:
     program_name: byte*
     states: List[State]
     allow_dark: bool
+    dry_run: bool
 
     @public
     def print(self) -> None:
@@ -213,6 +215,8 @@ def parse_command_line_args(argc: int, argv: byte**) -> CommandLineArgs:
                 exit(0)
             case "--allow-dark":
                 args.allow_dark = True
+            case "--dry-run":
+                args.dry_run = True
             case _:
                 if argv[i][0] == '-':
                     snprintf(msg, sizeof(msg), "unknown option \"%s\" (try --help)", argv[i])
@@ -315,5 +319,8 @@ def interpolate_states(args: CommandLineArgs*) -> double[3]:
 def main(argc: int, argv: byte**) -> int:
     args = parse_command_line_args(argc, argv)
     multipliers: double[3] = interpolate_states(&args)
-    set_multipliers_with_xcb(multipliers[0], multipliers[1], multipliers[2])
+    if args.dry_run:
+        printf("This would multiply red by %.2f, green by %.2f and blue by %.2f.\n", multipliers[0], multipliers[1], multipliers[2])
+    else:
+        set_multipliers_with_xcb(multipliers[0], multipliers[1], multipliers[2])
     return 0
