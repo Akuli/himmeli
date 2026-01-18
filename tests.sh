@@ -24,7 +24,6 @@ while [ $# != 0 ]; do
     esac
 done
 
-# Compile the program if not compiled yet
 command="jou -o himmeli src/main.jou"
 echo "Compiling: $command"
 $command
@@ -91,6 +90,12 @@ expect './himmeli: invalid state "1 1 1 1" (try --help)' from $himmeli "1 1 1 1"
 expect './himmeli: invalid state "1 1 1 1 1" (try --help)' from $himmeli "1 1 1 1 1"
 expect './himmeli: invalid state "inf" (try --help)' from $himmeli "inf"
 expect './himmeli: invalid state "nan" (try --help)' from $himmeli "nan"
+expect './himmeli: invalid state "-0.5" (try --help)' from $himmeli " -0.5"
+expect './himmeli: invalid state "5" (try --help)' from $himmeli "5"
+expect './himmeli: invalid state "1 1 -0.5" (try --help)' from $himmeli "1 1 -0.5"
+expect './himmeli: invalid state "1 1 5" (try --help)' from $himmeli "1 1 5"
+expect './himmeli: invalid state "5" (try --help)' from $himmeli "5 @ 12:34"
+expect './himmeli: invalid state "1 1 5" (try --help)' from $himmeli "1 1 5 @ 12:34"
 
 section "Totally wrong arguments"
 expect './himmeli: please specify how to color the screen (try --help)' from $himmeli
@@ -132,14 +137,6 @@ expect 'Would multiply red by x.xx, green by x.xx and blue by x.xx.' from remove
 expect 'Would multiply red by 1.00, green by 0.00 and blue by 0.00.' from $himmeli "1 0 0"
 expect 'Would multiply red by 0.00, green by 1.00 and blue by 0.00.' from $himmeli "0 1 0"
 expect 'Would multiply red by 0.00, green by 0.00 and blue by 1.00.' from $himmeli "0 0 1"
-
-section "Values not in correct ranges"
-expect './himmeli: invalid state "-0.5" (try --help)' from $himmeli " -0.5"
-expect './himmeli: invalid state "5" (try --help)' from $himmeli "5"
-expect './himmeli: invalid state "1 1 -0.5" (try --help)' from $himmeli "1 1 -0.5"
-expect './himmeli: invalid state "1 1 5" (try --help)' from $himmeli "1 1 5"
-expect './himmeli: invalid state "5" (try --help)' from $himmeli "5 @ 12:34"
-expect './himmeli: invalid state "1 1 5" (try --help)' from $himmeli "1 1 5 @ 12:34"
 
 echo ""
 echo ""
