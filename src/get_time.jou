@@ -24,7 +24,7 @@ declare localtime(timer: int64*) -> tm*
 
 @public
 def get_minute_of_day() -> int:
-    env_time = getenv("HIMMELI_TESTS_TIME")
+    env_time = getenv("HIMMELI_OVERRIDE_TIME")
     if env_time == NULL:
         # The usual case.
         now = time(NULL)

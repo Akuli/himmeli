@@ -47,8 +47,9 @@ function expect() {
     echo -ne "${GREEN}.${RESET}"
 }
 
+# TODO: delete this, use HIMMELI_OVERRIDE_TIME instead
 function remove_details() {
-    "$@" | sed 's/[0-9]\.[0-9][0-9]/x.xx/g' | sed 's/(until [0-9][0-9]:[0-9][0-9])/(until xx:xx)/g'
+    "$@" | sed 's/[0-9]\.[0-9][0-9]/x.xx/g'
 }
 
 section "Help"
@@ -152,7 +153,7 @@ expect './himmeli: specifying loop time in seconds is not supported, use minutes
 expect './himmeli: specifying loop time in seconds is not supported, use minutes or hours' from $himmeli --loop 1second
 expect './himmeli: specifying loop time in seconds is not supported, use minutes or hours' from $himmeli --loop "1 seconds"
 
-HIMMELI_TESTS_TIME=01:00 \
+HIMMELI_OVERRIDE_TIME=01:00 \
 expect 'Would immediately apply visibility value 1.00.
 Then wait 1 minute (until 01:01).
 Then adjust again: apply visibility value 0.98.
@@ -164,7 +165,7 @@ Then wait 1 minute (until 01:04).
 Then adjust again: apply visibility value 0.92.
 And so on.' from $himmeli --loop "1 min" "1 @ 1" "0.4 @ 1:30"
 
-HIMMELI_TESTS_TIME=01:00 \
+HIMMELI_OVERRIDE_TIME=01:00 \
 expect 'Would immediately apply visibility value 1.00.
 Then wait 5 minutes (until 01:05).
 Then adjust again: apply visibility value 0.90.
@@ -176,7 +177,7 @@ Then wait 5 minutes (until 01:20).
 Then adjust again: apply visibility value 0.60.
 And so on.' from $himmeli --loop "5 minutes" "1 @ 1" "0.4 @ 1:30"
 
-HIMMELI_TESTS_TIME=01:00 \
+HIMMELI_OVERRIDE_TIME=01:00 \
 expect 'Would immediately apply visibility value 0.40.
 Then wait 1 hour and 30 minutes (until 02:30).
 Then adjust again: apply visibility value 0.50.
@@ -188,7 +189,7 @@ Then wait 1 hour and 30 minutes (until 07:00).
 Then adjust again: apply visibility value 0.80.
 And so on.' from $himmeli --loop 90min "0.4 @ 1" "0.8 @ 7"
 
-HIMMELI_TESTS_TIME=01:00 \
+HIMMELI_OVERRIDE_TIME=01:00 \
 expect 'Would immediately multiply red by 0.80, green by 0.40 and blue by 0.00.
 Then wait 2 hours (until 03:00).
 Then adjust again: multiply red by 0.85, green by 0.55 and blue by 0.15.
