@@ -110,7 +110,7 @@ expect './himmeli: invalid time "23 :45" (try --help)' from $himmeli "1 @ 12:34"
 expect './himmeli: invalid time "12:34:56" (try --help)' from $himmeli "1 @ 12:34" "0.5 @ 12:34:56"
 expect 'Would multiply red by x.xx, green by x.xx and blue by x.xx.' from remove_details $himmeli '  1 1   1@12:34' '.6@   23:45 '
 # Time is not octal when it has a leading zero, so 09 is allowed
-expect 'Would multiply red by x.xx, green by x.xx and blue by x.xx.' from bash -c "$himmeli '  1 1   1@12:34' '.6@   23:45 ' | sed s/[0-9].[0-9][0-9]/x.xx/g"
+expect 'Would multiply red by x.xx, green by x.xx and blue by x.xx.' from remove_details $himmeli '  1 1   1@12:34' '.6@   23:45 '
 expect 'Would multiply red by x.xx, green by x.xx and blue by x.xx.' from remove_details $himmeli "0.5 @ 09:01 " "1 @ 9:2"
 
 section "Simple and correct"
