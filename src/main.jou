@@ -264,7 +264,7 @@ def parse_command_line_args(argc: int, argv: byte**) -> CommandLineArgs:
                     fail(&args, "when you specify multiple states, you must use '@' to specify a time for each state")
 
     if not args.allow_dark:
-        for s = &args.states.ptr[0]; s < args.states.end(); s++:
+        for s = args.states.ptr; s < args.states.end(); s++:
             # Not perfect, but good enough for this.
             # Note that the magic numbers sum to 1 so this is a weighted average.
             brightness = 0.2126*s.r_multiplier + 0.7152*s.g_multiplier + 0.0722*s.b_multiplier
@@ -280,21 +280,16 @@ def parse_command_line_args(argc: int, argv: byte**) -> CommandLineArgs:
                 )
                 fail(&args, msg)
 
-    # Check for duplicate times
-    for i = 0; i < args.states.len; i++:
-        for j = i + 1; j < args.states.len; j++:
-            s1 = &args.states.ptr[i]
-            s2 = &args.states.ptr[j]
+    # Check for duplicate time
+    for s1 = args.states.ptr; s1 < args.states.end(); s1++:
+        for s2 = &s1[1]; s2 < args.states.end(); s2++:
             if s1.hour != -1 and s2.hour != -1 and s1.hour == s2.hour and s1.minute == s2.minute:
                 snprintf(
-                    msg, sizeof(msg),
-                    "duplicate time: \"%s @ %02d:%02d\" and \"%s @ %02d:%02d\" both specify the same time",
-                    s1.original_color_string,
+                    msg,
+                    sizeof(msg),
+                    "the time %02d:%02d cannot be specified twice",
                     s1.hour,
                     s1.minute,
-                    s2.original_color_string,
-                    s2.hour,
-                    s2.minute,
                 )
                 fail(&args, msg)
 
