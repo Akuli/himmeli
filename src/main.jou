@@ -79,6 +79,7 @@ def print_help(program_name: byte*) -> None:
     printf("Options:\n")
     printf("  --help          this message\n")
     printf("  --allow-dark    allow making the screen very dark\n")
+    printf("  --dry-run       don't adjust screens, describe what would be done\n")
     printf("\n")
     printf("The simplest way to specify a state is a number between 0 and 1. Here 0 means\n")
     printf("black screen, 1 means reset, and values between 0 and 1 filter out mostly blue\n")
@@ -111,23 +112,7 @@ class CommandLineArgs:
     program_name: byte*
     states: List[State]
     allow_dark: bool
-
-    @public
-    def print(self) -> None:
-        printf("program_name = %s\n", self.program_name)
-        printf("allow_dark = %s\n", "True" if self.allow_dark else "False")
-        printf("states (%zd):\n", self.states.len)
-
-        for i = 0; i < self.states.len; i++:
-            s = &self.states.ptr[i]
-            printf(
-                "  [%d] R=%.3f  G=%.3f  B=%.3f  Vis=%.3f",
-                i, s.r_multiplier, s.g_multiplier, s.b_multiplier, s.visibility_value,
-            )
-            if s.hour >= 0 and s.minute >= 0:
-                printf("  @ %02d:%02d\n", s.hour, s.minute)
-            else:
-                printf("  (no time)\n")
+    dry_run: bool
 
 
 def parse_time(args: CommandLineArgs*, s: byte*) -> int[2]:
@@ -200,8 +185,6 @@ def parse_spec(args: CommandLineArgs*, s: byte*) -> None:
     args.states.append(state)
 
 
-# Public for tests
-@public
 def parse_command_line_args(argc: int, argv: byte**) -> CommandLineArgs:
     args = CommandLineArgs{program_name = argv[0]}
     msg: byte[300]
@@ -213,6 +196,8 @@ def parse_command_line_args(argc: int, argv: byte**) -> CommandLineArgs:
                 exit(0)
             case "--allow-dark":
                 args.allow_dark = True
+            case "--dry-run":
+                args.dry_run = True
             case _:
                 if argv[i][0] == '-':
                     snprintf(msg, sizeof(msg), "unknown option \"%s\" (try --help)", argv[i])
@@ -315,5 +300,8 @@ def interpolate_states(args: CommandLineArgs*) -> double[3]:
 def main(argc: int, argv: byte**) -> int:
     args = parse_command_line_args(argc, argv)
     multipliers: double[3] = interpolate_states(&args)
-    set_multipliers_with_xcb(multipliers[0], multipliers[1], multipliers[2])
+    if args.dry_run:
+        printf("Would multiply red by %.2f, green by %.2f and blue by %.2f.\n", multipliers[0], multipliers[1], multipliers[2])
+    else:
+        set_multipliers_with_xcb(multipliers[0], multipliers[1], multipliers[2])
     return 0
