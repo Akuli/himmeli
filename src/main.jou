@@ -202,8 +202,6 @@ def parse_spec(args: CommandLineArgs*, s: byte*) -> None:
     args.states.append(state)
 
 
-# Public for tests
-@public
 def parse_command_line_args(argc: int, argv: byte**) -> CommandLineArgs:
     args = CommandLineArgs{program_name = argv[0]}
     msg: byte[300]
