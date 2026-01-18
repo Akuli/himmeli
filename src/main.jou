@@ -353,7 +353,6 @@ declare sleep(seconds: uint32) -> uint32
 
 def sleep_minutes(minutes: uint32) -> None:
     assert minutes >= 0
-    printf("sleep %lld minutes\n", minutes as int64)
     assert minutes <= UINT32_MAX / (60 as uint32)
     sleep(minutes * (60 as uint32))
 
