@@ -3,9 +3,9 @@ import "./util.jou"
 
 def main() -> int:
     # Flag missing
-    # Output: ./himmeli: refusing because \"0.01\" would make the screen very dark, use --allow-dark if that's really what you want
-    # Output: ./himmeli: refusing because \"0.01\" would make the screen very dark, use --allow-dark if that's really what you want
-    # Output: ./himmeli: refusing because \"0.01\" would make the screen very dark, use --allow-dark if that's really what you want
+    # Output: ./himmeli: refusing because "0.01" would make the screen very dark, use --allow-dark if that's really what you want
+    # Output: ./himmeli: refusing because "0.01" would make the screen very dark, use --allow-dark if that's really what you want
+    # Output: ./himmeli: refusing because "0.01" would make the screen very dark, use --allow-dark if that's really what you want
     run_himmeli("0.01")
     run_himmeli("'0.01 @ 12:34' '1 @ 23:45'")
     run_himmeli("'1 @ 12:34' '0.01 @ 23:45'")
