@@ -209,6 +209,8 @@ def test_loop_flag() -> None:
 
 
 def main() -> int:
+    system("jou -o himmeli src/main.jou")
+
     test_help()
     test_misc()
     test_allow_dark()
