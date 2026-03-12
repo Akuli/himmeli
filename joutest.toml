@@ -1,5 +1,5 @@
 run_before_tests = "jou -o himmeli src/main.jou"
 
-[[files]]
-glob = "tests.jou"
+[[tests]]
+files = "tests.jou"
 mode = "check_output"
