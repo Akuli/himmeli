@@ -205,6 +205,8 @@ def test_loop_flag() -> None:
     # Output: And so on.
     run_himmeli("--loop=2h '0.8 0.4 0 @ 1' '1 1 0.6 @ 9'")
 
+    unsetenv("HIMMELI_OVERRIDE_TIME")
+
 
 def main() -> int:
     test_help()
