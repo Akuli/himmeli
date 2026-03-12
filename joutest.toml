@@ -1,4 +1,4 @@
-setup_command = "jou -o himmeli src/main.jou"
+run_before_tests = "jou -o himmeli src/main.jou"
 
 [[files]]
 glob = "tests.jou"
