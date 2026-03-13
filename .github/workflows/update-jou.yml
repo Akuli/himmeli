@@ -21,7 +21,7 @@ jobs:
       - name: Check for Jou update and create PR if needed
         run: |
           old_version=$(cat jou_version.txt)
-          new_version=$(curl -s -H "Authorization: token ${{ github.token }}" https://api.github.com/repos/Akuli/jou/releases/latest | jq -r .tag_name)
+          new_version=$(curl -f -H "Authorization: token ${{ github.token }}" https://api.github.com/repos/Akuli/jou/releases/latest | jq -r .tag_name)
 
           echo "Current Jou version: $old_version"
           echo "Latest Jou version: $new_version"
@@ -48,7 +48,7 @@ jobs:
           git push origin "$branch"
 
           # Create PR via REST API
-          curl -X POST -H "Authorization: token ${{ github.token }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_REPOSITORY/pulls -d @- <<EOF
+          curl -f -X POST -H "Authorization: token ${{ github.token }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_REPOSITORY/pulls -d @- <<EOF
           {
             "title": "Update Jou: $old_version → $new_version",
             "head": "$branch",
