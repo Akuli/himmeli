@@ -113,10 +113,15 @@ Thanks to [taahol](https://github.com/taahol) for the name suggestion.
 
 ## Developing
 
-To run tests, simply run `./tests.sh`.
-That script runs `./himmeli --dry-run` with various other arguments after it
-and compares the output to hard-coded strings with `diff`.
-This means that tests only check the behavior of `--dry-run`, and IMO that's fine.
+Use `joutest` to run the tests:
+
+```
+$ joutest
+```
+
+See `joutest.toml` and `tests.jou`.
+Currently the tests only check the behavior with the `--dry-run` flag,
+and IMO that's fine.
 
 Use `# TODO(Jou):` when you work around limitations of the Jou compiler or programming language,
 and plain `# TODO:` comments for everything else.

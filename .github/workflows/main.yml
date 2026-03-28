@@ -35,4 +35,4 @@ jobs:
       run: ./himmeli --help
 
     - name: Run tests
-      run: ./tests.sh
+      run: joutest
