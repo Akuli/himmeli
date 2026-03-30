@@ -6,8 +6,7 @@ so that the screen is less straining for your eyes and comfortable to look at.
 
 This program only does the screen adjusting.
 It is up to you to decide how you want to run it and set that up.
-For example, you may want to set up something to run this program when you log in,
-or perhaps every 3 minutes while you're logged in.
+For example, you may want to set up something to run this program when you log in.
 
 Currently this program assumes that you are using X11,
 but Windows, MacOS and Wayland support may be added later.
