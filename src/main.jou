@@ -343,7 +343,7 @@ def interpolate_states(args: CommandLineArgs*, now_minute_of_day: int) -> State:
             g_multiplier = calculate_green_multiplier(vis),
             b_multiplier = calculate_blue_multiplier(vis),
             visibility_value = vis,
-            hour = now_minute_of_day / 60,
+            hour = now_minute_of_day // 60,
             minute = now_minute_of_day % 60,
         }
     else:
@@ -352,7 +352,7 @@ def interpolate_states(args: CommandLineArgs*, now_minute_of_day: int) -> State:
             g_multiplier = lerp(prev.g_multiplier, next.g_multiplier, t),
             b_multiplier = lerp(prev.b_multiplier, next.b_multiplier, t),
             visibility_value = -1,
-            hour = now_minute_of_day / 60,
+            hour = now_minute_of_day // 60,
             minute = now_minute_of_day % 60,
         }
 
@@ -362,13 +362,13 @@ declare sleep(seconds: uint32) -> uint32
 
 def sleep_minutes(minutes: uint32) -> None:
     assert minutes >= 0
-    assert minutes <= UINT32_MAX / (60 as uint32)
+    assert minutes <= UINT32_MAX // (60 as uint32)
     sleep(minutes * (60 as uint32))
 
 
 def print_minutes(minutes: int) -> None:
     assert minutes >= 0
-    h = minutes / 60
+    h = minutes // 60
     m = minutes % 60
     if h != 0:
         printf("%d hour%s", h, "" if h == 1 else "s")
@@ -409,7 +409,7 @@ def dry_run(args: CommandLineArgs*) -> None:
         now %= 24*60
         printf("Then wait ")
         print_minutes(args.loop_minutes)
-        printf(" (until %02d:%02d).\n", now / 60, now % 60)
+        printf(" (until %02d:%02d).\n", now // 60, now % 60)
 
         interpolated = interpolate_states(args, now)
         printf("Then adjust again: ")
