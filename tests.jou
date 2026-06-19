@@ -209,7 +209,9 @@ def test_loop_flag() -> None:
 
 
 def main() -> int:
-    system("jou -o himmeli src/main.jou")
+    # $JOU_COMPILER_PATH is set by the Jou compiler and is needed if the Jou
+    # compiler is not in PATH.
+    system("\"$JOU_COMPILER_PATH\" -o himmeli src/main.jou")
 
     test_help()
     test_misc()
