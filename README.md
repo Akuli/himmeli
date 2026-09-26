@@ -22,7 +22,7 @@ This program is written in [my Jou programming language](https://github.com/Akul
 
 ## Setup
 
-1. Install Jou version 2026-08-01-0600 using [Jou's instructions](https://github.com/Akuli/jou/blob/2026-08-01-0600/README.md#setup).
+1. Install Jou version 2026-09-25-0900 using [Jou's instructions](https://github.com/Akuli/jou/blob/2026-09-25-0900/README.md#setup).
     Newer versions of Jou may also work.
 2. Install libraries: (please create a GitHub issue if you need help with this and you don't have `apt`)
     ```
