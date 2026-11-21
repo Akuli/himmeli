@@ -132,6 +132,8 @@ def test_allow_dark() -> None:
     run_himmeli("'0 1 0'")  # Output: Would multiply red by 0.00, green by 1.00 and blue by 0.00.
     run_himmeli("'0 0 1'")  # Output: Would multiply red by 0.00, green by 0.00 and blue by 1.00.
 
+    run_himmeli("--allow-dark=yessir")  # Output: ./himmeli: flag "--allow-dark" does not take a value (try --help)
+
 
 def test_loop_flag() -> None:
     # Output:
