@@ -1,3 +1,4 @@
+import "stdlib/argparse.jou"
 import "stdlib/ascii.jou"
 import "stdlib/assert.jou"
 import "stdlib/io.jou"
@@ -222,14 +223,13 @@ def parse_spec(args: CommandLineArgs*, s: byte*) -> None:
     args.states.append(state)
 
 
-def parse_command_line_args(argc: int, argv: byte**) -> CommandLineArgs:
+def parse_command_line_args(argv: byte**) -> CommandLineArgs:
     args = CommandLineArgs{program_name = argv[0]}
     msg: byte[300]
 
-    i = 1
-    while i < argc:
-        arg = argv[i++]
-        match arg with strcmp:
+    parser = ArgumentParser{argv = argv}
+    while parser.next():
+        match parser.flag with strcmp:
             case "--help":
                 print_help(args.program_name)
                 exit(0)
@@ -238,17 +238,19 @@ def parse_command_line_args(argc: int, argv: byte**) -> CommandLineArgs:
             case "--dry-run":
                 args.dry_run = True
             case "--loop":
-                if i == argc:
+                value = parser.take_value()
+                if value == NULL:
                     fail(&args, "missing time after --loop (try --help)")
-                set_loop_time(&args, argv[i++])
+                set_loop_time(&args, value)
+            case "":
+                parse_spec(&args, parser.take_value())
             case _:
-                if starts_with(arg, "--loop="):  # support "--loop=2min" and "--loop=2min"
-                    set_loop_time(&args, &strstr(arg, "=")[1])
-                elif arg[0] == '-':
-                    snprintf(msg, sizeof(msg), "unknown option \"%s\" (try --help)", arg)
-                    fail(&args, msg)
-                else:
-                    parse_spec(&args, arg)
+                snprintf(msg, sizeof(msg), "unknown option \"%s\" (try --help)", parser.flag)
+                fail(&args, msg)
+
+        if parser.pending_value != NULL:
+            snprintf(msg, sizeof(msg), "flag \"%s\" does not take a value (try --help)", parser.flag)
+            fail(&args, msg)
 
     match args.states.len:
         case 0:
@@ -437,7 +439,7 @@ def actual_run(args: CommandLineArgs*) -> None:
 
 
 def main(argc: int, argv: byte**) -> int:
-    args = parse_command_line_args(argc, argv)
+    args = parse_command_line_args(argv)
     if args.dry_run:
         dry_run(&args)
     else:
